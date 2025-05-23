@@ -40,7 +40,6 @@ steps:
 ## Requirements
 
 - GitHub runner with Docker and Docker Compose installed
-- The runner must have access to the configured port (7880)
 - Node.js environment for the wait-on dependency (will be installed automatically if needed)
 
 ## Technical Details
