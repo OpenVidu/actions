@@ -9,6 +9,10 @@ inputs:
     description: 'Maximum time to wait for deployment (in milliseconds)'
     required: false
     default: '60000'
+  pre_startup_commands:
+    description: 'Commands to execute before starting the deployment'
+    required: false
+    default: ''
 runs:
   using: "composite"
   steps:
@@ -19,6 +23,14 @@ runs:
         ref: ${{ inputs.branch }}
         path: openvidu-local-deployment
 
+    - name: Run pre-startup commands
+      shell: bash
+      working-directory: ./openvidu-local-deployment/community
+      run: |
+        if [ -n "${{ inputs.pre_startup_commands }}" ]; then
+          echo "Executing pre-startup commands..."
+          ${{ inputs.pre_startup_commands }}
+        fi
     - name: Configure Local Deployment
       shell: bash
       run: |

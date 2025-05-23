@@ -17,6 +17,7 @@ The action performs the following operations:
 | --------- | --------------------------------------------------------------------- | -------- | ------------- |
 | `branch`  | Branch to checkout from OpenVidu/openvidu-local-deployment repository | No       | `development` |
 | `timeout` | Maximum time to wait for deployment (in milliseconds)                 | No       | `60000`       |
+| `pre_startup_commands` | Commands to run before starting the deployment (e.g., for custom configurations) | No       | `""`          |
 
 ## Usage
 
@@ -30,6 +31,8 @@ steps:
     with:
       branch: 'main' # Optional: specify a different branch
       timeout: '120000' # Optional: extend timeout to 2 minutes
+      pre_startup_commands: |
+        echo "Running pre-startup commands..." # Optional: Add any pre-startup commands here
 
   - name: Run tests against local OpenVidu
     run: |
