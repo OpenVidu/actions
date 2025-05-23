@@ -1,4 +1,4 @@
-# Setup OpenVidu Local Deployment
+# Start OpenVidu Local Deployment
 
 This GitHub Action sets up an OpenVidu local deployment using Docker Compose for testing and development environments.
 
@@ -27,7 +27,7 @@ steps:
     uses: actions/checkout@v4
 
   - name: Setup OpenVidu Local Deployment
-    uses: OpenVidu/github-actions/setup-local-deployment@v1
+    uses: OpenVidu/actions/start-openvidu-local-deployment@v1
     with:
       branch: 'main' # Optional: specify a different branch
       timeout: '120000' # Optional: extend timeout to 2 minutes
