@@ -1,0 +1,38 @@
+name: 'Start OpenVidu Call backend'
+description: 'Start OpenVidu Call backend for testing'
+inputs:
+  branch:
+    description: 'Branch to checkout from OpenVidu/openvidu-call repository'
+    required: false
+    default: 'master'
+  timeout:
+    description: 'Maximum time to wait for backend startup (in milliseconds)'
+    required: false
+    default: '60000'
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout OpenVidu Call
+      uses: actions/checkout@v4
+      with:
+        repository: OpenVidu/openvidu-call
+        ref: ${{ inputs.branch }}
+        path: openvidu-call
+    - name: Start OpenVidu Call backend
+      working-directory: openvidu-call/backend
+      run: |
+        npm install
+        npm run dev:start &
+      shell: bash
+    - name: Install wait-on if needed
+      shell: bash
+      run: |
+        if ! command -v wait-on &> /dev/null; then
+          echo "wait-on not found, installing..."
+          npm install -g wait-on
+        else
+          echo "wait-on is already installed"
+        fi
+    - name: Wait for backend to start
+      shell: bash
+      run: wait-on --timeout ${{ inputs.timeout }} http://localhost:6080/call/api/healthcheck
