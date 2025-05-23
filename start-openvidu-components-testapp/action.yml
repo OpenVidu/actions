@@ -1,0 +1,43 @@
+name: 'Start openvidu-components-angular Testapp'
+description: 'Start openvidu-components-angular Testapp'
+inputs:
+  timeout:
+    description: 'Maximum time to wait for app to start (in milliseconds)'
+    required: false
+    default: '60000'
+runs:
+  using: 'composite'
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: |
+        cd openvidu-components-angular
+        npm install
+
+    - name: Build openvidu-components-angular library
+      shell: bash
+      run: npm run lib:build --prefix openvidu-components-angular
+
+    - name: Build openvidu-components-angular Testapp
+      shell: bash
+      run: npm run build --prefix openvidu-components-angular
+
+    - name: Serve openvidu-components-angular Testapp
+      shell: bash
+      run: npm run start --prefix openvidu-components-angular &
+    - name: Install wait-on if needed
+      shell: bash
+      run: |
+        if ! command -v wait-on &> /dev/null; then
+          echo "wait-on not found, installing..."
+          npm install -g wait-on
+        else
+          echo "wait-on is already installed"
+        fi
+
+    - name: Wait for openvidu-components-angular Testapp
+      shell: bash
+      run: |
+        echo "Waiting for Testapp to be available at http://localhost:4200 ..."
+        wait-on --timeout ${{ inputs.timeout }} http://localhost:4200
+        echo "Testapp is up and running!"
