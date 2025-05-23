@@ -1,0 +1,133 @@
+name: 'OpenVidu Environment Cleanup'
+description: 'Generic cleanup action for OpenVidu test environments'
+runs:
+  using: 'composite'
+  steps:
+    - name: Show pre-cleanup status
+      continue-on-error: true
+      shell: bash
+      run: |
+        echo "===== SYSTEM STATUS BEFORE CLEANUP ====="
+        echo "--- Disk space ---"
+        df -h
+        echo "--- Memory usage ---"
+        free -h
+        echo "--- Running processes ---"
+        ps aux | grep -E 'npm|node|java|openvidu|livekit' | grep -v grep || echo "No matching processes found"
+        echo "--- Docker containers ---"
+        docker ps -a || echo "No Docker containers or Docker not available"
+        echo "--- Listening ports ---"
+        netstat -tuln 2>/dev/null || ss -tuln || echo "Network tools not available"
+
+    - name: Kill common service processes
+      continue-on-error: true
+      shell: bash
+      run: |
+        echo "Stopping common service processes..."
+        # List of process patterns to kill
+        PROCESS_PATTERNS=("npm run" "node server" "java.*openvidu" "livekit")
+
+        for pattern in "${PROCESS_PATTERNS[@]}"; do
+          echo "Looking for processes matching: $pattern"
+          pids=$(ps aux | grep -E "$pattern" | grep -v grep | awk '{print $2}' || echo "")
+          if [ -n "$pids" ]; then
+            echo "Killing processes: $pids"
+            for pid in $pids; do
+              kill -15 $pid 2>/dev/null || kill -9 $pid 2>/dev/null || echo "Could not kill PID $pid"
+            done
+          else
+            echo "No matching processes found for pattern: $pattern"
+          fi
+        done
+
+    - name: Cleanup Docker resources
+      continue-on-error: true
+      shell: bash
+      run: |
+        echo "Cleaning up Docker resources..."
+
+        # Common Docker Compose project directories
+        COMPOSE_DIRS=("openvidu-local-deployment/community" "docker" "deployment")
+
+        for dir in "${COMPOSE_DIRS[@]}"; do
+          if [ -d "$dir" ] && [ -f "$dir/docker-compose.yml" -o -f "$dir/docker-compose.yaml" ]; then
+            echo "Found Docker Compose in $dir, stopping containers..."
+            cd "$dir"
+            docker compose down -v || echo "Warning: Failed to stop containers in $dir"
+            cd - > /dev/null
+          fi
+        done
+
+        # Stop all remaining containers
+        CONTAINERS=$(docker ps -q 2>/dev/null || echo "")
+        if [ -n "$CONTAINERS" ]; then
+          echo "Stopping running containers: $CONTAINERS"
+          docker stop $CONTAINERS || echo "Warning: Failed to stop some containers"
+        else
+          echo "No running containers found"
+        fi
+
+        # Remove all containers
+        CONTAINERS=$(docker ps -aq 2>/dev/null || echo "")
+        if [ -n "$CONTAINERS" ]; then
+          echo "Removing containers: $CONTAINERS"
+          docker rm -f $CONTAINERS || echo "Warning: Failed to remove some containers"
+        fi
+
+        # Prune Docker resources
+        echo "Pruning Docker system..."
+        docker system prune -af --volumes || echo "Warning: Docker system prune failed"
+
+    - name: Cleanup temporary files
+      continue-on-error: true
+      shell: bash
+      run: |
+        echo "Cleaning temporary files..."
+        # Generic temp patterns for OpenVidu related files
+        TEMP_PATTERNS=("openvidu-*" "livekit-*" "webrtc-*" "mediasoup-*")
+
+        for pattern in "${TEMP_PATTERNS[@]}"; do
+          echo "Removing /tmp/$pattern files..."
+          find /tmp -name "$pattern" -type f -o -type d 2>/dev/null | xargs rm -rf 2>/dev/null || echo "No $pattern files found or permission denied"
+        done
+
+    - name: Cleanup build directories
+      continue-on-error: true
+      shell: bash
+      run: |
+        echo "Cleaning build directories..."
+        # Safe cleanup of common build directories
+        find . -type d -name "node_modules" -exec rm -rf {} \; 2>/dev/null || echo "Failed to clean some node_modules dirs"
+        find . -type d -name "dist" -exec rm -rf {} \; 2>/dev/null || echo "Failed to clean some dist dirs"
+        find . -type d -name ".cache" -exec rm -rf {} \; 2>/dev/null || echo "Failed to clean some cache dirs"
+        find . -type d -name ".angular" -exec rm -rf {} \; 2>/dev/null || echo "Failed to clean some angular dirs"
+
+        # Clean specific directories with sudo if necessary but safely
+        if [ -d "openvidu-local-deployment" ]; then
+          sudo rm -rf openvidu-local-deployment 2>/dev/null || rm -rf openvidu-local-deployment 2>/dev/null || echo "Warning: Failed to remove openvidu-local-deployment"
+        fi
+
+    - name: Free disk space
+      continue-on-error: true
+      shell: bash
+      run: |
+        # Clear caches that might be safe to remove
+        sudo find /var/cache -type f -delete 2>/dev/null || echo "Failed to clean some cache files"
+
+        # Clear npm cache
+        npm cache clean --force 2>/dev/null || echo "npm cache clean failed"
+
+    - name: Show final system status
+      continue-on-error: true
+      shell: bash
+      run: |
+        echo "===== SYSTEM STATUS AFTER CLEANUP ====="
+        echo "--- Disk space ---"
+        df -h
+        echo "--- Memory usage ---"
+        free -h
+        echo "--- Docker containers ---"
+        docker ps -a || echo "No Docker containers or Docker not available"
+        echo "--- Running processes ---"
+        ps aux | grep -E 'npm|node|java|openvidu|livekit' | grep -v grep || echo "No matching processes found"
+        echo "===== CLEANUP COMPLETED SUCCESSFULLY ====="
