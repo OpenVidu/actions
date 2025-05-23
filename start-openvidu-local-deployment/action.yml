@@ -6,7 +6,7 @@ inputs:
     required: false
     default: 'development'
   timeout:
-    description: 'Maximum time to wait for deployment (in milliseconds)'
+    description: 'Maximum time to wait for deployment startup (in milliseconds)'
     required: false
     default: '60000'
   pre_startup_commands:

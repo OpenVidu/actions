@@ -16,7 +16,7 @@ The action performs the following operations:
 | Parameter | Description                                                           | Required | Default       |
 | --------- | --------------------------------------------------------------------- | -------- | ------------- |
 | `branch`  | Branch to checkout from OpenVidu/openvidu-local-deployment repository | No       | `development` |
-| `timeout` | Maximum time to wait for deployment (in milliseconds)                 | No       | `60000`       |
+| `timeout` | Maximum time to wait for deployment startup (in milliseconds)                 | No       | `60000`       |
 | `pre_startup_commands` | Commands to run before starting the deployment (e.g., for custom configurations) | No       | `""`          |
 
 ## Usage
