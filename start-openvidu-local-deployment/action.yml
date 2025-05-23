@@ -1,0 +1,40 @@
+name: Start OpenVidu Local Deployment
+description: Start OpenVidu Local Deployment with Docker Compose
+inputs:
+  branch:
+    description: 'Branch to checkout from OpenVidu/openvidu-local-deployment repository'
+    required: false
+    default: 'development'
+  timeout:
+    description: 'Maximum time to wait for deployment (in milliseconds)'
+    required: false
+    default: '60000'
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout OpenVidu Local Deployment
+      uses: actions/checkout@v4
+      with:
+        repository: OpenVidu/openvidu-local-deployment
+        ref: ${{ inputs.branch }}
+        path: openvidu-local-deployment
+
+    - name: Configure Local Deployment
+      shell: bash
+      run: |
+        cd openvidu-local-deployment/community
+        ./configure_lan_private_ip_linux.sh
+        docker compose up -d
+    - name: Install wait-on if needed
+      shell: bash
+      run: |
+        if ! command -v wait-on &> /dev/null; then
+          echo "wait-on not found, installing..."
+          npm install -g wait-on
+        else
+          echo "wait-on is already installed"
+        fi
+
+    - name: Wait for OpenVidu Local Deployment to Start
+      shell: bash
+      run: wait-on --timeout ${{ inputs.timeout }} http://localhost:7880
