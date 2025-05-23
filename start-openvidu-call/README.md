@@ -26,7 +26,7 @@ steps:
     uses: actions/checkout@v4
 
   - name: Setup OpenVidu Call Backend
-    uses: OpenVidu/github-actions/setup-openvidu-call-backend@v1
+    uses: OpenVidu/actions/start-openvidu-call@main
     with:
       branch: 'develop'  # Optional: specify a different branch
       timeout: '120000'  # Optional: extend timeout to 2 minutes
