@@ -1,0 +1,71 @@
+name: 'Start AWS EC2 Runner'
+description: 'Start an EC2 GitHub Actions runner on AWS'
+inputs:
+  aws-instance-type:
+    description: 'EC2 instance type'
+    required: false
+    default: 'c5.large'
+  aws-access-key-id:
+    description: 'AWS Access Key ID'
+    required: true
+  aws-secret-access-key:
+    description: 'AWS Secret Access Key'
+    required: true
+  aws-region:
+    description: 'AWS Region'
+    required: true
+  github-token:
+    description: 'GitHub token for runner registration'
+    required: true
+  ec2-image-id:
+    description: 'AMI ID for the EC2 instance'
+    required: true
+  subnet-id:
+    description: 'AWS Subnet ID'
+    required: true
+  security-group-id:
+    description: 'AWS Security Group ID'
+    required: true
+  workflow-name:
+    description: 'Workflow name for tagging'
+    required: false
+    default: ${{ github.workflow }}
+  repository-name:
+    description: 'Repository name for tagging'
+    required: false
+    default: ${{ github.repository }}
+
+outputs:
+  label:
+    description: 'Label of the started EC2 runner'
+    value: ${{ steps.start-ec2-runner.outputs.label }}
+  ec2-instance-id:
+    description: 'EC2 instance ID of the started runner'
+    value: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Start EC2 runner
+      id: start-ec2-runner
+      uses: machulav/ec2-github-runner@v2
+      with:
+        mode: start
+        github-token: ${{ inputs.github-token }}
+        ec2-image-id: ${{ inputs.ec2-image-id }}
+        ec2-instance-type: ${{ inputs.aws-instance-type }}
+        subnet-id: ${{ inputs.subnet-id }}
+        security-group-id: ${{ inputs.security-group-id }}
+        aws-resource-tags: >
+          [
+            {"Key": "Name", "Value": "ec2-github-runner"},
+            {"Key": "Workflow", "Value": "${{ inputs.workflow-name }}"},
+            {"Key": "GitHubRepository", "Value": "${{ inputs.repository-name }}"}
+          ]
