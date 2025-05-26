@@ -34,7 +34,7 @@ jobs:
     steps:
       - name: Start AWS EC2 Runner
         id: start-runner
-        uses: OpenVidu/github-actions/start-aws-runner@v1
+        uses: OpenVidu/github-actions/start-aws-runner@main
         with:
           # ... start runner inputs
 
@@ -50,7 +50,7 @@ jobs:
     if: always()  # Always run cleanup
     steps:
       - name: Stop AWS EC2 Runner
-        uses: OpenVidu/github-actions/stop-aws-runner@v1
+        uses: OpenVidu/github-actions/stop-aws-runner@main
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
