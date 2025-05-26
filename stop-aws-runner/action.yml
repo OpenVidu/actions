@@ -1,0 +1,39 @@
+name: 'Stop AWS EC2 Runner'
+description: 'Stop an EC2 GitHub Actions runner on AWS'
+inputs:
+  aws-access-key-id:
+    description: 'AWS Access Key ID'
+    required: true
+  aws-secret-access-key:
+    description: 'AWS Secret Access Key'
+    required: true
+  aws-region:
+    description: 'AWS Region'
+    required: true
+  github-token:
+    description: 'GitHub token for runner registration'
+    required: true
+  label:
+    description: 'Label of the EC2 runner to stop'
+    required: true
+  ec2-instance-id:
+    description: 'EC2 instance ID of the runner to stop'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Stop EC2 runner
+      uses: machulav/ec2-github-runner@v2
+      with:
+        mode: stop
+        github-token: ${{ inputs.github-token }}
+        label: ${{ inputs.label }}
+        ec2-instance-id: ${{ inputs.ec2-instance-id }}
