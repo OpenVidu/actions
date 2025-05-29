@@ -14,11 +14,15 @@ inputs:
     required: true
     default: "community"
   rtc-engine:
-    description: 'RTC engine to use. Only if openvidu-edition == "pro". Must be one of "pion" or "mediasoup"'
+    description: 'RTC engine to use. Only takes effect if openvidu-edition == "pro". Must be one of "pion" or "mediasoup"'
     default: "mediasoup"
     required: false
+  mediasoup-worker-bin:
+    description: 'Path to the mediasoup-worker binary. Only takes effect if openvidu-edition == "pro" && rtc-engine == "mediasoup". If provided, ref-openvidu-pro-mediasoup will be ignored. This is useful to avoid setting up the mediasoup-worker binary twice if action setup-mediasoup-worker has already been called before'
+    required: false
+    default: ""
   ref-openvidu-pro-mediasoup:
-    description: 'Branch, tag or commit SHA to checkout in repository OpenVidu/openvidu-pro-mediasoup. Only required if openvidu-edition == \"pro\" && rtc-engine == \"mediasoup\" && ref-openvidu-pro-mediasoup != \"default\". If "default" mediasoup-worker binary will not be compiled: artifact from latest release of OpenVidu/openvidu-pro-mediasoup will be used'
+    description: 'If mediasoup-worker-bin is not provided, branch, tag or commit SHA to checkout in repository OpenVidu/openvidu-pro-mediasoup. Only takes effect if openvidu-edition == \"pro\" && rtc-engine == \"mediasoup\". If "default" mediasoup-worker binary will not be compiled: artifact from latest release of OpenVidu/openvidu-pro-mediasoup will be used'
     required: false
     default: "default"
   tags-openvidu-local-deployment:
@@ -44,7 +48,7 @@ runs:
 
     - name: Checkout OpenVidu/openvidu-pro-mediasoup
       uses: actions/checkout@v4
-      if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' }}
+      if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' && inputs.mediasoup-worker-bin == '' }}
       with:
         repository: OpenVidu/openvidu-pro-mediasoup
         ref: ${{ inputs.ref-openvidu-pro-mediasoup }}
@@ -58,7 +62,7 @@ runs:
         sudo wget https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
 
     - name: Setup mediasoup-worker
-      if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' }}
+      if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.mediasoup-worker-bin == '' }}
       id: setup-mediasoup-worker
       uses: OpenVidu/actions/setup-mediasoup-worker@main
       with:
@@ -116,7 +120,7 @@ runs:
       shell: bash
       working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
       env:
-        MEDIASOUP_WORKER_BIN: ${{ steps.setup-mediasoup-worker.outputs.MEDIASOUP_WORKER_BIN }}
+        MEDIASOUP_WORKER_BIN: ${{ inputs.mediasoup-worker-bin || steps.setup-mediasoup-worker.outputs.MEDIASOUP_WORKER_BIN }}
       run: |
         ./configure_lan_private_ip_linux.sh
         if [ "${{ inputs.openvidu-edition }}" = "pro" ]; then
