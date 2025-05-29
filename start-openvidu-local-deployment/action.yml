@@ -57,37 +57,13 @@ runs:
         sudo apt update && sudo apt install -y build-essential jq
         sudo wget https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
 
-    - name: Setup Python
-      if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.13"
-
-    - name: Compile mediasoup-worker
-      if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' }}
-      shell: bash
-      working-directory: ./openvidu-pro-mediasoup/mediasoup/worker
-      run: make
-
-    - name: Download mediasoup-worker
-      if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup == 'default' }}
-      uses: dsaltares/fetch-gh-release-asset@master
-      with:
-        repo: OpenVidu/openvidu-pro-mediasoup
-        version: tags/v3.12.16-openvidu1
-        file: mediasoup-worker
-        token: ${{ inputs.github-token }}
-
-    - name: Setup mediasoup-worker env
+    - name: Setup mediasoup-worker
       if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' }}
-      shell: bash
-      run: |
-        if [ "${{ inputs.ref-openvidu-pro-mediasoup }}" != "default" ]; then
-          echo "MEDIASOUP_WORKER_BIN=${{ github.workspace }}/openvidu-pro-mediasoup/mediasoup/worker/out/Release/mediasoup-worker" >> $GITHUB_ENV
-        else
-          chmod +x ${{ github.workspace }}/mediasoup-worker
-          echo "MEDIASOUP_WORKER_BIN=${{ github.workspace }}/mediasoup-worker" >> $GITHUB_ENV
-        fi
+      id: setup-mediasoup-worker
+      uses: OpenVidu/actions/setup-mediasoup-worker@main
+      with:
+        ref-openvidu-pro-mediasoup: ${{ inputs.ref-openvidu-pro-mediasoup }}
+        github-token: ${{ inputs.github-token }}
 
       # This step saves every JSON key-value pair from the input `tags-openvidu-local-deployment` as environment variables.
       # {"my-key": "my-value"} -> TAG_MY_KEY=my-value
@@ -139,6 +115,8 @@ runs:
     - name: Configure OpenVidu Local Deployment
       shell: bash
       working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      env:
+        MEDIASOUP_WORKER_BIN: ${{ steps.setup-mediasoup-worker.outputs.MEDIASOUP_WORKER_BIN }}
       run: |
         ./configure_lan_private_ip_linux.sh
         if [ "${{ inputs.openvidu-edition }}" = "pro" ]; then

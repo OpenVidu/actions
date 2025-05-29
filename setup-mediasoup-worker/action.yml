@@ -1,0 +1,63 @@
+name: "Setup mediasoup-worker"
+description: "Compile mediasoup-worker from sources or download precompiled binary"
+
+inputs:
+  ref-openvidu-pro-mediasoup:
+    description: 'Branch, tag or commit SHA to checkout in repository OpenVidu/openvidu-pro-mediasoup. If "default" mediasoup-worker binary will not be compiled: artifact from latest release of OpenVidu/openvidu-pro-mediasoup will be used'
+    required: false
+    default: "default"
+  github-token:
+    description: 'GitHub token to access private repositories. Only required if ref-openvidu-pro-mediasoup != "default"'
+    required: false
+
+outputs:
+  MEDIASOUP_WORKER_BIN:
+    description: "Path to the mediasoup-worker binary"
+    value: ${{ steps.mediasoup-worker-bin.outputs.MEDIASOUP_WORKER_BIN }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout OpenVidu/openvidu-pro-mediasoup
+      if: ${{ inputs.ref-openvidu-pro-mediasoup != 'default' }}
+      uses: actions/checkout@v4
+      with:
+        repository: OpenVidu/openvidu-pro-mediasoup
+        path: openvidu-pro-mediasoup
+        ref: ${{ inputs.ref-openvidu-pro-mediasoup }}
+        token: ${{ inputs.github-token }}
+
+    - name: Setup Python
+      if: ${{ inputs.ref-openvidu-pro-mediasoup != 'default' }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
+
+    - name: Compile mediasoup-worker
+      if: ${{ inputs.ref-openvidu-pro-mediasoup != 'default' }}
+      shell: bash
+      working-directory: ./openvidu-pro-mediasoup/mediasoup/worker
+      run: make
+
+    - name: Download mediasoup-worker
+      if: ${{ inputs.ref-openvidu-pro-mediasoup == 'default' }}
+      uses: dsaltares/fetch-gh-release-asset@master
+      with:
+        repo: OpenVidu/openvidu-pro-mediasoup
+        version: tags/v3.12.16-openvidu1
+        file: mediasoup-worker
+        token: ${{ inputs.github-token }}
+
+    - name: Output mediasoup-worker binary path to MEDIASOUP_WORKER_BIN
+      id: mediasoup-worker-bin
+      shell: bash
+      run: |
+        if [ "${{ inputs.ref-openvidu-pro-mediasoup }}" != "default" ]; then
+          MEDIASOUP_WORKER_PATH="${{ github.workspace }}/openvidu-pro-mediasoup/mediasoup/worker/out/Release/mediasoup-worker"
+          echo "MEDIASOUP_WORKER_BIN=$MEDIASOUP_WORKER_PATH" >> $GITHUB_OUTPUT
+          chmod +x "$MEDIASOUP_WORKER_PATH"
+        else
+          MEDIASOUP_WORKER_PATH="${{ github.workspace }}/mediasoup-worker"
+          echo "MEDIASOUP_WORKER_BIN=$MEDIASOUP_WORKER_PATH" >> $GITHUB_OUTPUT
+          chmod +x "$MEDIASOUP_WORKER_PATH"
+        fi
