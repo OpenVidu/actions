@@ -1,45 +1,62 @@
 name: Start OpenVidu Local Deployment
 description: Start OpenVidu Local Deployment with Docker Compose
 inputs:
-  branch:
-    description: 'Branch to checkout from OpenVidu/openvidu-local-deployment repository'
+  ref-openvidu-local-deployment:
+    description: "Branch, tag or commit SHA to checkout in repository OpenVidu/openvidu-local-deployment"
     required: false
-    default: 'development'
+    default: "development"
   timeout:
-    description: 'Maximum time to wait for deployment startup (in milliseconds)'
+    description: "Maximum time to wait for deployment startup (in milliseconds)"
     required: false
-    default: '60000'
+    default: "60000"
+  openvidu-edition:
+    description: "OpenVidu edition to use"
+    required: true
+    default: "community"
+  rtc-engine:
+    description: "RTC engine to use. Only for OpenVidu PRO"
+    default: "mediasoup"
+    required: true
+  ref-openvidu-pro-mediasoup:
+    description: 'Branch, tag or commit SHA to checkout in repository OpenVidu/openvidu-pro-mediasoup. Only required if openvidu-edition == \"pro\" && rtc-engine == \"mediasoup\" && ref-openvidu-pro-mediasoup != \"default\". If "default" mediasoup-worker binary will not be compiled: artifact from latest release of OpenVidu/openvidu-pro-mediasoup will be used'
+    required: false
+    default: "default"
+  tags-openvidu-local-deployment:
+    description: "JSON object with tags for overwriting values in the docker-compose.yaml services of the openvidu-local-deployment (https://github.com/OpenVidu/openvidu-local-deployment/blob/main/pro/docker-compose.yaml).\nExample: {\"caddy-proxy\": \"main\", \"redis\": \"7.4.2-alpine\", \"minio\": \"2025.2.7-debian-12-r0\", \"mongo\": \"8.0.4\", \"dashboard\": \"main\", \"ingress\": \"main\", \"egress\": \"v1.9.0\", \"default-app\": \"main-demo\", \"openvidu-v2compatibility\": \"main\", \"operator\": \"main\"}"
+    required: false
+  github-token:
+    description: 'GitHub token to access private repositories. Only required if openvidu-edition == "pro" && rtc-engine == "mediasoup" && ref-openvidu-pro-mediasoup != "default"'
+    required: false
   pre_startup_commands:
-    description: 'Commands to execute before starting the deployment'
+    description: "Commands to execute before starting the deployment. The path is the same as the docker-compose.yaml file"
     required: false
-    default: ''
+    default: ""
+
 runs:
   using: "composite"
   steps:
-    - name: Checkout OpenVidu Local Deployment
+    - name: Checkout OpenVidu/openvidu-local-deployment
       uses: actions/checkout@v4
       with:
         repository: OpenVidu/openvidu-local-deployment
-        ref: ${{ inputs.branch }}
+        ref: ${{ inputs.ref-openvidu-local-deployment }}
         path: openvidu-local-deployment
 
-    - name: Run pre-startup commands
-      shell: bash
-      working-directory: ./openvidu-local-deployment/community
-      run: |
-        if [ -n "${{ inputs.pre_startup_commands }}" ]; then
-          echo "Executing pre-startup commands..."
-          ${{ inputs.pre_startup_commands }}
-        fi
-    - name: Configure Local Deployment
-      shell: bash
-      run: |
-        cd openvidu-local-deployment/community
-        ./configure_lan_private_ip_linux.sh
-        docker compose up -d
-    - name: Install wait-on if needed
+    - name: Checkout OpenVidu/openvidu-pro-mediasoup
+      uses: actions/checkout@v4
+      if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' }}
+      with:
+        repository: OpenVidu/openvidu-pro-mediasoup
+        ref: ${{ inputs.ref-openvidu-local-deployment }}
+        path: openvidu-pro-mediasoup
+        token: ${{ inputs.github-token }}
+
+    - name: Install required packages
       shell: bash
       run: |
+        sudo add-apt-repository ppa:rmescandon/yq
+        sudo apt update
+        sudo apt install -y build-essential yq
         if ! command -v wait-on &> /dev/null; then
           echo "wait-on not found, installing..."
           npm install -g wait-on
@@ -47,6 +64,147 @@ runs:
           echo "wait-on is already installed"
         fi
 
-    - name: Wait for OpenVidu Local Deployment to Start
+    - name: Compile mediasoup-worker
+      if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' }}
       shell: bash
-      run: wait-on --timeout ${{ inputs.timeout }} http://localhost:7880
+      working-directory: ./openvidu-pro-mediasoup/mediasoup/worker
+      run: make
+
+    - name: Download mediasoup-worker
+      if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup == 'default' }}
+      uses: dsaltares/fetch-gh-release-asset@master
+      with:
+        repo: OpenVidu/openvidu-pro-mediasoup
+        version: tags/v3.12.16-openvidu1
+        file: mediasoup-worker
+        token: ${{ inputs.github-token }}
+
+    - name: Setup mediasoup-worker env
+      if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' }}
+      shell: bash
+      run: |
+        if [ "${{ inputs.ref-openvidu-pro-mediasoup }}" != "default" ]; then
+          echo "MEDIASOUP_WORKER_BIN=${{ github.workspace }}/openvidu-pro-mediasoup/mediasoup/worker/out/Release/mediasoup-worker" >> $GITHUB_ENV
+        else
+          chmod +x ${{ github.workspace }}/mediasoup-worker
+          echo "MEDIASOUP_WORKER_BIN=${{ github.workspace }}/mediasoup-worker" >> $GITHUB_ENV
+        fi
+
+    - name: Tag OpenVidu Local Deployment
+      shell: bash
+      working-directory: ./openvidu-local-deployment/${{ inputs.ref-openvidu-local-deployment }}
+      run: |
+        # Function to update image tag for a service in the docker-compose.yaml
+        # For it to take effect, the service must exist and the tag must be non-empty
+        update_service_tag() {
+          local service_name="$1"
+          local new_tag="$2"
+          if [ -n "$new_tag" ]; then
+            # Check if the service exists in the docker-compose.yaml
+            if yq e ".services | has(\"$service_name\")" docker-compose.yaml | grep -q "true"; then
+              local current_image=$(yq e ".services.$service_name.image" docker-compose.yaml)
+              local base_image=${current_image%:*}
+              yq e -i ".services.$service_name.image = \"$base_image:$new_tag\"" docker-compose.yaml
+            fi
+          fi
+        }
+        update_service_tag "caddy-proxy" "$TAG_CADDY_PROXY"
+        update_service_tag "redis" "$TAG_REDIS"
+        update_service_tag "minio" "$TAG_MINIO"
+        update_service_tag "mongo" "$TAG_MONGO"
+        update_service_tag "dashboard" "$TAG_DASHBOARD"
+        update_service_tag "openvidu" "$TAG_OPENVIDU"
+        update_service_tag "ingress" "$TAG_INGRESS"
+        update_service_tag "egress" "$TAG_EGRESS"
+        update_service_tag "default-app" "$TAG_DEFAULT_APP"
+        update_service_tag "openvidu-v2compatibility" "$TAG_OPENVIDU_V2COMPATIBILITY"
+        update_service_tag "operator" "$TAG_OPERATOR"
+
+    - name: Run pre-startup commands
+      shell: bash
+      working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      run: |
+        if [ -n "${{ inputs.pre_startup_commands }}" ]; then
+          echo "Executing pre-startup commands..."
+          ${{ inputs.pre_startup_commands }}
+        fi
+
+    - name: Configure OpenVidu Local Deployment
+      shell: bash
+      working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      run: |
+        ./configure_lan_private_ip_linux.sh
+        if [ "${{ inputs.openvidu-edition }}" = "pro" ]; then
+          yq e -i '.openvidu.rtc.engine = "${{ inputs.rtc-engine }}"' livekit.yaml
+          yq e -i '.openvidu.rtc.engine = "${{ inputs.rtc-engine }}"' ingress.yaml
+          if [ "${{ inputs.rtc-engine }}" = "mediasoup" ]; then
+            yq e -i '.openvidu.environment += ["MEDIASOUP_WORKER_BIN='${MEDIASOUP_WORKER_BIN:-}'"]' docker-compose.yaml
+          fi
+        fi
+        docker compose down -v
+        docker compose pull --ignore-pull-failures
+        # Print all YAML files in local deployment
+        for file in *.yml *.yaml; do
+          [ -e "$file" ] || continue
+          printf "\n\n"
+          echo "------------------ FILE: $file ------------------"
+          cat "$file"
+          echo "------------------ END FILE: $file ------------------"
+          printf "\n\n"
+        done
+
+    - name: Run OpenVidu Local Deployment
+      shell: bash
+      working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      run: |
+        docker compose up -d
+
+    - name: Wait until OpenVidu Local Deployment ready
+      shell: bash
+      working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      run: |
+        CONTAINER_NAME_PART="ready-check"
+        TIMEOUT_MS=${{ inputs.timeout }}
+        TIMEOUT=$((TIMEOUT_MS / 1000))
+        INTERVAL=1
+        START_TIME=$(date +%s)
+
+        get_container_id() {
+          docker ps -aqf "name=$CONTAINER_NAME_PART"
+        }
+
+        echo "Waiting for container '$CONTAINER_NAME_PART' to be created..."
+        while true; do
+          CONTAINER_ID=$(get_container_id)
+          if [[ -n "$CONTAINER_ID" ]]; then
+            echo "Container found: $CONTAINER_ID"
+            break
+          fi
+          sleep "$INTERVAL"
+          CURRENT_TIME=$(date +%s)
+          if (( CURRENT_TIME - START_TIME >= TIMEOUT )); then
+            echo "Timeout: Container did not appear within $TIMEOUT seconds."
+            exit 1
+          fi
+        done
+
+        echo "Waiting for container to exit..."
+        while true; do
+          CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' "$CONTAINER_ID")
+          if [[ "$CONTAINER_STATUS" == "exited" ]]; then
+            EXIT_CODE=$(docker inspect --format='{{.State.ExitCode}}' "$CONTAINER_ID")
+            if [[ "$EXIT_CODE" -eq 0 ]]; then
+              echo "Container exited successfully with code 0."
+              exit 0
+            else
+              echo "Container exited with non-zero exit code: $EXIT_CODE"
+              exit 1
+            fi
+          fi
+          sleep "$INTERVAL"
+          CURRENT_TIME=$(date +%s)
+          if (( CURRENT_TIME - START_TIME >= TIMEOUT )); then
+            echo "Timeout: Container did not exit within $TIMEOUT seconds."
+            exit 1
+          fi
+        done
