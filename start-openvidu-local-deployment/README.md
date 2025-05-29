@@ -58,4 +58,4 @@ steps:
 
 ## Requirements
 
-- GitHub runner with Docker and Docker Compose installed
+- Linux GitHub runner with Docker and Docker Compose installed
