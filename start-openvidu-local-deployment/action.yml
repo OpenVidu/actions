@@ -140,7 +140,7 @@ runs:
           yq e -i '.openvidu.rtc.engine = "${{ inputs.rtc-engine }}"' livekit.yaml
           yq e -i '.openvidu.rtc.engine = "${{ inputs.rtc-engine }}"' ingress.yaml
           if [ "${{ inputs.rtc-engine }}" = "mediasoup" ]; then
-            yq e -i '.openvidu.environment += ["MEDIASOUP_WORKER_BIN='${MEDIASOUP_WORKER_BIN:-}'"]' docker-compose.yaml
+            yq e -i '.services.openvidu.environment += ["MEDIASOUP_WORKER_BIN='${MEDIASOUP_WORKER_BIN:-}'"]' docker-compose.yaml
           fi
         fi
         docker compose down -v
