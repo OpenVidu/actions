@@ -23,8 +23,8 @@ Here's a Markdown table documenting the inputs of this GitHub Action:
 |------------|-------------|----------|---------------|
 | `ref-openvidu-local-deployment` | Branch, tag or commit SHA to checkout in repository OpenVidu/openvidu-local-deployment | No | `development` |
 | `timeout` | Maximum time to wait for deployment startup (in milliseconds) | No | `60000` |
-| `openvidu-edition` | OpenVidu edition to use | Yes | `community` |
-| `rtc-engine` | RTC engine to use. Only if openvidu-edition == "pro" | No | `mediasoup` |
+| `openvidu-edition` | OpenVidu edition to use. Must be one of `community` or `pro` | Yes | `community` |
+| `rtc-engine` | RTC engine to use. Only if openvidu-edition == "pro". Must be one of `pion` or `mediasoup` | No | `mediasoup` |
 | `ref-openvidu-pro-mediasoup` | Branch, tag or commit SHA to checkout in repository OpenVidu/openvidu-pro-mediasoup. Only required if openvidu-edition == "pro" && rtc-engine == "mediasoup" && ref-openvidu-pro-mediasoup != "default". If "default" mediasoup-worker binary will not be compiled: artifact from latest release of OpenVidu/openvidu-pro-mediasoup will be used | No | `default` |
 | `tags-openvidu-local-deployment` | JSON object with tags for overwriting values in the docker-compose.yaml services of the openvidu-local-deployment. Example: `{"caddy-proxy": "main", "redis": "7.4.2-alpine", "minio": "2025.2.7-debian-12-r0", "mongo": "8.0.4", "dashboard": "main", "ingress": "main", "egress": "v1.9.0", "default-app": "main-demo", "openvidu-v2compatibility": "main", "operator": "main"}` | No | - |
 | `github-token` | GitHub token to access private repositories. Only required if openvidu-edition == "pro" && rtc-engine == "mediasoup" && ref-openvidu-pro-mediasoup != "default" | No | - |

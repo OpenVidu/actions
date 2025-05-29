@@ -10,11 +10,11 @@ inputs:
     required: false
     default: "60000"
   openvidu-edition:
-    description: "OpenVidu edition to use"
+    description: 'OpenVidu edition to use. Must be one of "community" or "pro"'
     required: true
     default: "community"
   rtc-engine:
-    description: 'RTC engine to use. Only if openvidu-edition == "pro"'
+    description: 'RTC engine to use. Only if openvidu-edition == "pro". Must be one of "pion" or "mediasoup"'
     default: "mediasoup"
     required: false
   ref-openvidu-pro-mediasoup:
@@ -47,7 +47,7 @@ runs:
       if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' }}
       with:
         repository: OpenVidu/openvidu-pro-mediasoup
-        ref: ${{ inputs.ref-openvidu-local-deployment }}
+        ref: ${{ inputs.ref-openvidu-pro-mediasoup }}
         path: openvidu-pro-mediasoup
         token: ${{ inputs.github-token }}
 
@@ -94,7 +94,7 @@ runs:
 
     - name: Tag OpenVidu Local Deployment
       shell: bash
-      working-directory: ./openvidu-local-deployment/${{ inputs.ref-openvidu-local-deployment }}
+      working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
       run: |
         # Function to update image tag for a service in the docker-compose.yaml
         # For it to take effect, the service must exist and the tag must be non-empty
