@@ -14,9 +14,9 @@ inputs:
     required: true
     default: "community"
   rtc-engine:
-    description: "RTC engine to use. Only for OpenVidu PRO"
+    description: "RTC engine to use. Only if openvidu-edition == \"pro\""
     default: "mediasoup"
-    required: true
+    required: false
   ref-openvidu-pro-mediasoup:
     description: 'Branch, tag or commit SHA to checkout in repository OpenVidu/openvidu-pro-mediasoup. Only required if openvidu-edition == \"pro\" && rtc-engine == \"mediasoup\" && ref-openvidu-pro-mediasoup != \"default\". If "default" mediasoup-worker binary will not be compiled: artifact from latest release of OpenVidu/openvidu-pro-mediasoup will be used'
     required: false
@@ -54,15 +54,9 @@ runs:
     - name: Install required packages
       shell: bash
       run: |
-        sudo add-apt-repository ppa:rmescandon/yq
-        sudo apt update
+        sudo add-apt-repository -y ppa:rmescandon/yq
+        sudo apt update -y
         sudo apt install -y build-essential yq
-        if ! command -v wait-on &> /dev/null; then
-          echo "wait-on not found, installing..."
-          npm install -g wait-on
-        else
-          echo "wait-on is already installed"
-        fi
 
     - name: Compile mediasoup-worker
       if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' }}
