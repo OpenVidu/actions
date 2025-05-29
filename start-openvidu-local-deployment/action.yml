@@ -55,7 +55,7 @@ runs:
       shell: bash
       run: |
         sudo apt update && sudo apt install -y build-essential jq
-        wget https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64 -O /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+        sudo wget https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64 -O /usr/local/bin/yq && sudo chmod 777 /usr/local/bin/yq
 
     - name: Compile mediasoup-worker
       if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' }}
