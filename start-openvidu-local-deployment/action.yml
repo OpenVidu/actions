@@ -8,7 +8,7 @@ inputs:
   timeout:
     description: "Maximum time to wait for deployment startup (in milliseconds)"
     required: false
-    default: "60000"
+    default: "100000"
   openvidu-edition:
     description: 'OpenVidu edition to use. Must be one of "community" or "pro"'
     required: true
