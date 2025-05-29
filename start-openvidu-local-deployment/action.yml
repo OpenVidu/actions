@@ -58,6 +58,7 @@ runs:
         sudo wget https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
 
     - name: Setup Python
+      if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' }}
       uses: actions/setup-python@v5
       with:
         python-version: "3.13"
