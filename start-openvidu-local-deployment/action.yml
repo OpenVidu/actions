@@ -56,7 +56,7 @@ runs:
       run: |
         sudo add-apt-repository -y ppa:rmescandon/yq
         sudo apt update -y
-        sudo apt install -y build-essential yq
+        sudo apt install -y build-essential yq jq
 
     - name: Compile mediasoup-worker
       if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' }}
