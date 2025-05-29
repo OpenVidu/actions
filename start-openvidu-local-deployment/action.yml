@@ -54,9 +54,8 @@ runs:
     - name: Install required packages
       shell: bash
       run: |
-        sudo add-apt-repository -y ppa:rmescandon/yq
-        sudo apt update -y
-        sudo apt install -y build-essential yq jq
+        sudo apt update && sudo apt install -y build-essential jq
+        wget https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64 -O /usr/local/bin/yq && chmod +x /usr/local/bin/yq
 
     - name: Compile mediasoup-worker
       if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' }}
