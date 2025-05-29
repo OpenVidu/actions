@@ -14,7 +14,7 @@ inputs:
     required: true
     default: "community"
   rtc-engine:
-    description: "RTC engine to use. Only if openvidu-edition == \"pro\""
+    description: 'RTC engine to use. Only if openvidu-edition == "pro"'
     default: "mediasoup"
     required: false
   ref-openvidu-pro-mediasoup:
@@ -83,6 +83,14 @@ runs:
           chmod +x ${{ github.workspace }}/mediasoup-worker
           echo "MEDIASOUP_WORKER_BIN=${{ github.workspace }}/mediasoup-worker" >> $GITHUB_ENV
         fi
+
+      # This step saves every JSON key-value pair from the input `tags-openvidu-local-deployment` as environment variables.
+      # {"my-key": "my-value"} -> TAG_MY_KEY=my-value
+    - name: Set OpenVidu Local Deployment tags as env vars from JSON
+      shell: bash
+      if: ${{ inputs.tags-openvidu-local-deployment != '' }}
+      run: |
+        echo '${{ inputs.tags-openvidu-local-deployment }}' | jq -r 'to_entries[] | "TAG_\(.key | ascii_upcase | gsub("-"; "_"))=\(.value)"' >> "$GITHUB_ENV"
 
     - name: Tag OpenVidu Local Deployment
       shell: bash
