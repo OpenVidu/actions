@@ -45,4 +45,3 @@ steps:
 - The backend is started using `npm run start:prod` in background mode
 - The action waits until the backend is responding at the healthcheck endpoint (`http://localhost:6080/meet/health`)
 - If the backend doesn't start within the timeout period, the action will fail
-- The `wait-on` tool is used to check for backend availability

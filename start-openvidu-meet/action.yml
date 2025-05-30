@@ -21,4 +21,26 @@ runs:
         npm run start:prod &
     - name: Wait for OpenVidu Meet to Start
       shell: bash
-      run: wait-on --timeout ${{ inputs.timeout }} http://localhost:6080/meet/health
+      run: |
+        echo "Waiting for OpenVidu Meet to be available at http://localhost:6080/meet/health..."
+        timeout_ms=${{ inputs.timeout }}
+        timeout_s=$((timeout_ms / 1000))
+        start_time=$(date +%s)
+
+        while true; do
+          if curl -s -f http://localhost:6080/meet/health > /dev/null 2>&1; then
+            echo "OpenVidu Meet is up and running!"
+            break
+          fi
+
+          current_time=$(date +%s)
+          elapsed=$((current_time - start_time))
+
+          if [ $elapsed -ge $timeout_s ]; then
+            echo "Timeout: OpenVidu Meet did not start within ${timeout_s} seconds"
+            exit 1
+          fi
+
+          echo "Waiting... (${elapsed}s/${timeout_s}s)"
+          sleep 5
+        done
