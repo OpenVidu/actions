@@ -1,0 +1,45 @@
+name: 'Start OpenVidu Meet Testapp'
+description: 'Start the OpenVidu Meet testapp and wait for it to be ready'
+inputs:
+  timeout:
+    description: 'Maximum time to wait for testapp to start (in milliseconds)'
+    required: false
+    default: '60000'
+runs:
+  using: 'composite'
+  steps:
+    - name: Start OpenVidu Meet Testapp
+      shell: bash
+      run: |
+        echo "Starting OpenVidu Meet testapp..."
+        cd testapp
+        npm run start > ../testapp.log 2>&1 &
+        echo "Testapp started in background"
+
+    - name: Wait for OpenVidu Meet Testapp to Start
+      shell: bash
+      run: |
+        echo "Waiting for testapp to be available at http://localhost:5080..."
+        timeout_ms=${{ inputs.timeout }}
+        timeout_s=$((timeout_ms / 1000))
+        start_time=$(date +%s)
+
+        while true; do
+          if curl -s -f http://localhost:5080 > /dev/null 2>&1; then
+            echo "OpenVidu Meet testapp is up and running!"
+            break
+          fi
+
+          current_time=$(date +%s)
+          elapsed=$((current_time - start_time))
+
+          if [ $elapsed -ge $timeout_s ]; then
+            echo "Timeout: Testapp did not start within ${timeout_s} seconds"
+            echo "=== Testapp logs ==="
+            cat testapp.log || echo "No logs available"
+            exit 1
+          fi
+
+          echo "Waiting... (${elapsed}s/${timeout_s}s)"
+          sleep 2
+        done
