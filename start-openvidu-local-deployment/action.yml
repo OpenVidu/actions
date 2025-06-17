@@ -113,7 +113,7 @@ runs:
       run: |
         if [ -n "${{ inputs.pre_startup_commands }}" ]; then
           echo "Executing pre-startup commands..."
-          ${{ inputs.pre_startup_commands }}
+          bash -c "${{ inputs.pre_startup_commands }}"
         fi
 
     - name: Configure OpenVidu Local Deployment
