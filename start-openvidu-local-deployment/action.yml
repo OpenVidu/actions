@@ -110,11 +110,11 @@ runs:
     - name: Run pre-startup commands
       shell: bash
       working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      if: ${{ inputs.pre_startup_commands != '' }}
       run: |
-        if [ -n "${{ inputs.pre_startup_commands }}" ]; then
-          echo "Executing pre-startup commands..."
-          ${{ inputs.pre_startup_commands }}
-        fi
+        echo "Executing pre-startup commands..."
+        ${{ inputs.pre_startup_commands }}
+        
 
     - name: Configure OpenVidu Local Deployment
       shell: bash
