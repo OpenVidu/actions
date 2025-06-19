@@ -6,11 +6,10 @@ This GitHub Action sets up and runs the OpenVidu Meet for testing and developmen
 
 This action automates the process of setting up and running the OpenVidu Meet by:
 
-1. Installing yarn (required for the redlock package)
-2. Checking out the OpenVidu Meet repository
-3. Preparing the environment using the prepare script
-4. Starting the app in production mode
-5. Waiting for the app to be ready and accessible
+1. Checking out the OpenVidu Meet repository
+2. Preparing the environment using the prepare script
+3. Starting the app in production mode
+4. Waiting for the app to be ready and accessible
 
 ## Inputs
 
@@ -42,6 +41,6 @@ steps:
 
 ## Technical Details
 
-- The backend is started using `npm run start:prod` in background mode
+- The backend is started using `npm run start:ci` in background mode
 - The action waits until the backend is responding at the healthcheck endpoint (`http://localhost:6080/meet/health`)
 - If the backend doesn't start within the timeout period, the action will fail

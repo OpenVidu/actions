@@ -15,7 +15,7 @@ runs:
       run: |
         ./prepare.sh
         cd backend
-        npm run start:prod &
+        npm run start:ci &
     - name: Wait for OpenVidu Meet to Start
       shell: bash
       run: |
