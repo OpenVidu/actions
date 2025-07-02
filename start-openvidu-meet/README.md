@@ -32,7 +32,7 @@ steps:
   - name: Run tests against OpenVidu Meet
     run: |
       # Your test commands here
-      # OpenVidu Meet will be available at http://localhost:6080/meet
+      # OpenVidu Meet will be available at http://localhost:6080/
 ```
 
 ## Requirements
@@ -42,5 +42,5 @@ steps:
 ## Technical Details
 
 - The backend is started using `npm run start:ci` in background mode
-- The action waits until the backend is responding at the healthcheck endpoint (`http://localhost:6080/meet/health`)
+- The action waits until the backend is responding at the healthcheck endpoint (`http://localhost:6080/health`)
 - If the backend doesn't start within the timeout period, the action will fail
