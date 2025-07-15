@@ -1,10 +1,14 @@
 name: Start OpenVidu Meet
-description: Checkout and start OpenVidu Meet and wait for it to be ready
+description: Checkout and optionally start OpenVidu Meet and wait for it to be ready
 inputs:
   timeout:
     description: Maximum time to wait for OpenVidu Meet to start (in milliseconds)
     required: false
     default: '60000'
+  skip_backend_start:
+    description: Skip starting the backend server (only build and prepare)
+    required: false
+    default: 'false'
 runs:
   using: "composite"
   steps:
@@ -16,9 +20,14 @@ runs:
       shell: bash
       run: |
         ./prepare.sh
-        cd backend
-        npm run start:ci &
+        if [ "${{ inputs.skip_backend_start }}" != "true" ]; then
+          cd backend
+          npm run start:ci &
+        else
+          echo "Skipping backend start as requested"
+        fi
     - name: Wait for OpenVidu Meet to Start
+      if: ${{ inputs.skip_backend_start != 'true' }}
       shell: bash
       run: |
         echo "Waiting for OpenVidu Meet to be available at http://localhost:6080/health..."
