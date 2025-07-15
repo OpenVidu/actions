@@ -16,7 +16,7 @@ runs:
       shell: bash
       run: |
         echo "Preparing OpenVidu Meet testapp..."
-        ./prepare.sh --testapp
+        ./prepare.sh --webcomponent --testapp
     - name: Start OpenVidu Meet Testapp
       shell: bash
       run: |
