@@ -8,6 +8,15 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Checkout OpenVidu Meet
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+    - name: Prepare OpenVidu Meet Testapp
+      shell: bash
+      run: |
+        echo "Preparing OpenVidu Meet testapp..."
+        ./prepare.sh --testapp
     - name: Start OpenVidu Meet Testapp
       shell: bash
       run: |
