@@ -12,14 +12,13 @@ runs:
       uses: actions/checkout@v4
       with:
         ref: ${{ github.ref }}
+
     - name: Prepare OpenVidu Meet Testapp
       shell: bash
       run: |
         echo "Preparing OpenVidu Meet testapp..."
         ./prepare.sh --typings --webcomponent --testapp
-      env:
-        OPENVIDU_MEET_URL: http://localhost:9080/api/v1
-        WEBCOMPONENT_SRC: http://localhost:9080/v1/openvidu-meet.js
+
     - name: Start OpenVidu Meet Testapp
       shell: bash
       run: |
@@ -27,9 +26,6 @@ runs:
         cd testapp
         npm run start > ../testapp.log 2>&1 &
         echo "Testapp started in background"
-      env:
-        OPENVIDU_MEET_URL: http://localhost:9080/api/v1
-        WEBCOMPONENT_SRC: http://localhost:9080/v1/openvidu-meet.js
 
     - name: Wait for OpenVidu Meet Testapp to Start
       shell: bash
