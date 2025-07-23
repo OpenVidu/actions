@@ -17,6 +17,9 @@ runs:
       run: |
         echo "Preparing OpenVidu Meet testapp..."
         ./prepare.sh --typings --webcomponent --testapp
+      env:
+        OPENVIDU_MEET_URL: http://localhost:9080/api/v1
+        WEBCOMPONENT_SRC: http://localhost:9080/v1/openvidu-meet.js
     - name: Start OpenVidu Meet Testapp
       shell: bash
       run: |
