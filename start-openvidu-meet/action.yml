@@ -22,7 +22,7 @@ runs:
         ./prepare.sh
         if [ "${{ inputs.skip_backend_start }}" != "true" ]; then
           cd backend
-          npm run start:ci &
+          npm run start:ci > meet_backend.log 2>&1 &
         else
           echo "Skipping backend start as requested"
         fi
