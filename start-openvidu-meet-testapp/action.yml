@@ -24,7 +24,7 @@ runs:
       run: |
         echo "Starting OpenVidu Meet testapp..."
         cd testapp
-        npm run start > ../testapp.log 2>&1 &
+        npm run start > testapp.log 2>&1 &
         echo "Testapp started in background"
 
     - name: Wait for OpenVidu Meet Testapp to Start
