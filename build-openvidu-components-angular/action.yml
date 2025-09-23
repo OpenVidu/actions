@@ -40,8 +40,11 @@ runs:
       run: |
         echo "Building OpenVidu Components Angular..."
 
-        # Create unique artifact name to avoid conflicts between parallel workflows
-        UNIQUE_ARTIFACT_NAME="${{ inputs.artifact_name }}-${{ github.run_id }}-${{ github.run_attempt }}"
+        # Create unique artifact name to avoid conflicts between parallel workflows and jobs
+        TIMESTAMP=$(date +%s%N | cut -b1-13)  # milliseconds since epoch
+        RANDOM_SUFFIX=$RANDOM  # Random number for extra uniqueness
+        UNIQUE_ARTIFACT_NAME="${{ inputs.artifact_name }}-${TIMESTAMP}-${RANDOM_SUFFIX}"
+
         echo "unique_artifact_name=$UNIQUE_ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
         echo "Using unique artifact name: $UNIQUE_ARTIFACT_NAME"
 

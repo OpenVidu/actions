@@ -59,7 +59,7 @@ steps:
     - name: Use the artifact in later steps
       uses: actions/download-artifact@v4
       with:
-          name: ${{ steps.build.outputs.artifact_name }} # Will be something like 'my-custom-components-12345-1'
+          name: ${{ steps.build.outputs.artifact_name }}
           path: './components'
 ```
 
@@ -79,7 +79,6 @@ steps:
 
 ### Artifact Naming and Parallel Execution
 
--   **Unique naming**: Artifact names are automatically made unique using `{name}-{run_id}-{run_attempt}` to prevent conflicts
+-   **Unique naming**: Artifact names are automatically made unique using `{name}-{timestamp}-{random_suffix}` to prevent conflicts
 -   **Parallel safety**: Multiple workflows can run this action simultaneously without conflicts
 -   **Output usage**: Always use the `artifact_name` output instead of the input when referencing the artifact in subsequent steps
--   **Example**: Input `my-components` becomes `my-components-12345-1` in the artifact store
