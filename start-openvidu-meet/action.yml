@@ -37,7 +37,7 @@ runs:
       if: ${{ inputs.build_components_angular == 'true' }}
       uses: actions/download-artifact@v4
       with:
-        name: 'openvidu-components-angular-temp'
+        name: ${{ steps.build_components.outputs.artifact_name }}
         path: frontend
 
     - name: Install Custom OpenVidu Components Angular
@@ -52,7 +52,7 @@ runs:
       if: ${{ inputs.build_components_angular == 'true' && always() }}
       uses: geekyeggo/delete-artifact@v5
       with:
-        name: 'openvidu-components-angular-temp'
+        name: ${{ steps.build_components.outputs.artifact_name }}
 
     - name: Prepare OpenVidu Meet
       shell: bash

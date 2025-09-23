@@ -10,13 +10,13 @@ inputs:
     required: false
     default: 'master'
   artifact_name:
-    description: 'Name of the artifact to upload'
+    description: 'Name of the artifact to upload (will be made unique automatically)'
     required: false
     default: 'openvidu-components-angular'
 outputs:
   artifact_name:
-    description: 'Name of the uploaded artifact'
-    value: ${{ inputs.artifact_name }}
+    description: 'Name of the uploaded artifact (with unique suffix)'
+    value: ${{ steps.build.outputs.unique_artifact_name }}
   package_filename:
     description: 'Filename of the built package'
     value: ${{ steps.build.outputs.package_filename }}
@@ -40,6 +40,11 @@ runs:
       run: |
         echo "Building OpenVidu Components Angular..."
 
+        # Create unique artifact name to avoid conflicts between parallel workflows
+        UNIQUE_ARTIFACT_NAME="${{ inputs.artifact_name }}-${{ github.run_id }}-${{ github.run_attempt }}"
+        echo "unique_artifact_name=$UNIQUE_ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+        echo "Using unique artifact name: $UNIQUE_ARTIFACT_NAME"
+
         # Define common paths
         COMPONENTS_DIR="components-source/openvidu-components-angular"
         DIST_DIR="dist/openvidu-components-angular"
@@ -62,5 +67,5 @@ runs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.artifact_name }}
+        name: ${{ steps.build.outputs.unique_artifact_name }}
         path: components-source/openvidu-components-angular/dist/openvidu-components-angular/openvidu-components-angular.tgz
