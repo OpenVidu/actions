@@ -20,11 +20,6 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Checkout OpenVidu Meet
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.ref }}
-
     - name: Build OpenVidu Components Angular
       if: ${{ inputs.build_components_angular == 'true' }}
       id: build_components
@@ -32,6 +27,11 @@ runs:
       with:
         checkout_ref: ${{ inputs.components_checkout_ref }}
         artifact_name: 'openvidu-components-angular-temp'
+
+    - name: Checkout OpenVidu Meet
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
 
     - name: Download OpenVidu Components Angular
       if: ${{ inputs.build_components_angular == 'true' }}
