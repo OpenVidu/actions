@@ -53,10 +53,6 @@ runs:
         # Package the built library
         npm run lib:pack
 
-        # List the contents of the dist directory for verification
-        ls -al
-        ls -al "$DIST_DIR"
-
         # Rename to standard name for easier handling
         mv "$DIST_DIR"/openvidu-components-angular-*.tgz "$DIST_DIR/$PACKAGE_NAME"
 
