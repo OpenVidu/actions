@@ -28,16 +28,15 @@ runs:
       with:
         repository: ${{ inputs.repository }}
         ref: ${{ inputs.checkout_ref }}
-        path: openvidu-components-angular-source
 
     - name: Build OpenVidu Components Angular
       id: build
       shell: bash
-      working-directory: openvidu-components-angular-source/openvidu-components-angular
       run: |
         echo "Building OpenVidu Components Angular..."
 
         # Install dependencies and build the library
+        cd openvidu-components-angular
         npm install
         npm run lib:build
 
@@ -53,7 +52,6 @@ runs:
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
-      working-directory: openvidu-components-angular-source/openvidu-components-angular
       with:
         name: ${{ inputs.artifact_name }}
-        path: dist/openvidu-components-angular/openvidu-components-angular.tgz
+        path: openvidu-components-angular/dist/openvidu-components-angular/openvidu-components-angular.tgz
