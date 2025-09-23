@@ -9,13 +9,51 @@ inputs:
     description: Skip starting the backend server (only build and prepare)
     required: false
     default: 'false'
+  build_components_angular:
+    description: Build and include latest OpenVidu Components Angular library in frontend
+    required: false
+    default: 'true'
+  components_checkout_ref:
+    description: Branch, tag, or commit to checkout for OpenVidu Components Angular
+    required: false
+    default: 'master'
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Checkout OpenVidu Meet
       uses: actions/checkout@v4
       with:
         ref: ${{ github.ref }}
+
+    - name: Build OpenVidu Components Angular
+      if: ${{ inputs.build_components_angular == 'true' }}
+      id: build_components
+      uses: OpenVidu/actions/build-openvidu-components-angular@main
+      with:
+        checkout_ref: ${{ inputs.components_checkout_ref }}
+        artifact_name: 'openvidu-components-angular-temp'
+
+    - name: Download OpenVidu Components Angular
+      if: ${{ inputs.build_components_angular == 'true' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: 'openvidu-components-angular-temp'
+        path: frontend
+
+    - name: Install Custom OpenVidu Components Angular
+      if: ${{ inputs.build_components_angular == 'true' }}
+      shell: bash
+      run: |
+        echo "Installing custom OpenVidu Components Angular library..."
+        cd frontend
+        npm install openvidu-components-angular.tgz
+
+    - name: Clean up artifacts
+      if: ${{ inputs.build_components_angular == 'true' && always() }}
+      uses: geekyeggo/delete-artifact@v5
+      with:
+        name: 'openvidu-components-angular-temp'
+
     - name: Prepare OpenVidu Meet
       shell: bash
       run: |
@@ -26,6 +64,7 @@ runs:
         else
           echo "Skipping backend start as requested"
         fi
+
     - name: Wait for OpenVidu Meet to Start
       if: ${{ inputs.skip_backend_start != 'true' }}
       shell: bash
