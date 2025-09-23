@@ -73,3 +73,4 @@ steps:
 -   The action is designed to be reusable across different workflows
 -   The built package is automatically uploaded as a GitHub Actions artifact
 -   Artifacts are temporary and will be automatically deleted after the workflow retention period
+-   No cleanup is performed - the source code remains in the `components-source` directory
