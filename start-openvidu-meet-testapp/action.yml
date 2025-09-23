@@ -5,10 +5,15 @@ inputs:
     description: 'Maximum time to wait for testapp to start (in milliseconds)'
     required: false
     default: '60000'
+  skip_checkout:
+    description: 'Skip repository checkout (use when repository is already checked out)'
+    required: false
+    default: 'false'
 runs:
   using: 'composite'
   steps:
     - name: Checkout OpenVidu Meet
+      if: ${{ inputs.skip_checkout != 'true' }}
       uses: actions/checkout@v4
       with:
         ref: ${{ github.ref }}
