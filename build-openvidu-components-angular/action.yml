@@ -26,7 +26,7 @@ runs:
     - name: Setup Node.js
       uses: actions/setup-node@v5
       with:
-          node-version: '22.13'
+        node-version: '22.13'
     - name: Checkout OpenVidu Components Angular
       uses: actions/checkout@v4
       with:
@@ -42,7 +42,7 @@ runs:
 
         # Define common paths
         COMPONENTS_DIR="components-source/openvidu-components-angular"
-        DIST_DIR="$COMPONENTS_DIR/dist/openvidu-components-angular"
+        DIST_DIR="dist/openvidu-components-angular"
         PACKAGE_NAME="openvidu-components-angular.tgz"
 
         # Install dependencies and build the library
@@ -52,6 +52,10 @@ runs:
 
         # Package the built library
         npm run lib:pack
+
+        # List the contents of the dist directory for verification
+        ls -al
+        ls -al "$DIST_DIR"
 
         # Rename to standard name for easier handling
         mv "$DIST_DIR"/openvidu-components-angular-*.tgz "$DIST_DIR/$PACKAGE_NAME"
