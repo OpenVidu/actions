@@ -36,19 +36,23 @@ runs:
       run: |
         echo "Building OpenVidu Components Angular..."
 
+        # Define common paths
+        COMPONENTS_DIR="components-source/openvidu-components-angular"
+        DIST_DIR="$COMPONENTS_DIR/dist/openvidu-components-angular"
+        PACKAGE_NAME="openvidu-components-angular.tgz"
+
         # Install dependencies and build the library
-        cd components-source/openvidu-components-angular
+        cd "$COMPONENTS_DIR"
         npm install
         npm run lib:build
 
         # Package the built library
-        cd dist/openvidu-components-angular
-        npm pack
+        npm run lib:pack
 
         # Rename to standard name for easier handling
-        mv openvidu-components-angular-*.tgz openvidu-components-angular.tgz
+        mv "$DIST_DIR"/openvidu-components-angular-*.tgz "$DIST_DIR/$PACKAGE_NAME"
 
-        echo "package_filename=openvidu-components-angular.tgz" >> $GITHUB_OUTPUT
+        echo "package_filename=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
         echo "OpenVidu Components Angular built successfully"
 
     - name: Upload artifact
