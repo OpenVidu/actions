@@ -23,6 +23,10 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v5
+      with:
+          node-version: '22.13'
     - name: Checkout OpenVidu Components Angular
       uses: actions/checkout@v4
       with:
