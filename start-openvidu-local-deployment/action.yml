@@ -132,15 +132,6 @@ runs:
         fi
         docker compose down -v
         docker compose pull --ignore-pull-failures
-        # Print all YAML files in local deployment
-        for file in *.yml *.yaml; do
-          [ -e "$file" ] || continue
-          printf "\n\n"
-          echo "------------------ FILE: $file ------------------"
-          cat "$file"
-          echo "------------------ END FILE: $file ------------------"
-          printf "\n\n"
-        done
 
     - name: Run OpenVidu Local Deployment
       shell: bash
