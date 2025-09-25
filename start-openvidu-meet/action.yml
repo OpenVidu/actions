@@ -17,11 +17,14 @@ inputs:
     description: Branch, tag, or commit to checkout for OpenVidu Components Angular
     required: false
     default: 'master'
+  components_artifact_name:
+    description: Name of existing artifact with OpenVidu Components Angular package (if provided, skips building)
+    required: false
 runs:
   using: 'composite'
   steps:
     - name: Build OpenVidu Components Angular
-      if: ${{ inputs.build_components_angular == 'true' }}
+      if: ${{ inputs.build_components_angular == 'true' && inputs.components_artifact_name == '' }}
       id: build_components
       uses: OpenVidu/actions/build-openvidu-components-angular@main
       with:
@@ -37,7 +40,7 @@ runs:
       if: ${{ inputs.build_components_angular == 'true' }}
       uses: actions/download-artifact@v4
       with:
-        name: ${{ steps.build_components.outputs.artifact_name }}
+        name: ${{ inputs.components_artifact_name != '' && inputs.components_artifact_name || steps.build_components.outputs.artifact_name }}
         path: frontend
 
     - name: Install Custom OpenVidu Components Angular
@@ -48,8 +51,8 @@ runs:
         cd frontend
         npm install openvidu-components-angular.tgz
 
-    - name: Clean up artifacts
-      if: ${{ inputs.build_components_angular == 'true' && always() }}
+    - name: Clean up artifacts (Built)
+      if: ${{ inputs.build_components_angular == 'true' && inputs.components_artifact_name == '' && always() }}
       uses: geekyeggo/delete-artifact@v5
       with:
         name: ${{ steps.build_components.outputs.artifact_name }}
