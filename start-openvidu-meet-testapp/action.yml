@@ -22,14 +22,15 @@ runs:
       shell: bash
       run: |
         echo "Preparing OpenVidu Meet testapp..."
-        ./prepare.sh --typings --webcomponent --testapp
+        ./meet.sh build-typings
+        ./meet.sh build-webcomponent
+        ./meet.sh build-testapp
 
     - name: Start OpenVidu Meet Testapp
       shell: bash
       run: |
         echo "Starting OpenVidu Meet testapp..."
-        cd testapp
-        npm run start > testapp.log 2>&1 &
+        ./meet.sh start-testapp > testapp.log 2>&1 &
         echo "Testapp started in background"
 
     - name: Wait for OpenVidu Meet Testapp to Start
