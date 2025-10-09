@@ -49,7 +49,7 @@ runs:
       run: |
         echo "Installing custom OpenVidu Components Angular library..."
         cd frontend
-        npm install openvidu-components-angular.tgz
+        pnpm install openvidu-components-angular.tgz
 
     - name: Clean up artifacts (Built)
       if: ${{ inputs.build_components_angular == 'true' && inputs.components_artifact_name == '' && always() }}
@@ -60,11 +60,10 @@ runs:
     - name: Prepare OpenVidu Meet
       shell: bash
       run: |
-        ./prepare.sh
         if [ "${{ inputs.skip_backend_start }}" != "true" ]; then
-          cd backend
-          npm run start:ci > meet_backend.log 2>&1 &
+          ./meet.sh start --ci > meet_backend.log 2>&1 &
         else
+          ./meet.sh build
           echo "Skipping backend start as requested"
         fi
 
