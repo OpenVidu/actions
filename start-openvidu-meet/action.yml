@@ -52,8 +52,20 @@ runs:
       shell: bash
       run: |
         echo "Installing custom OpenVidu Components Angular library..."
-        cd frontend
-        pnpm install openvidu-components-angular.tgz
+        echo "Files in frontend directory:"
+        ls -la frontend/
+        echo "Looking for .tgz files:"
+        find frontend/ -name "*.tgz" -type f
+        TGZ_FILE=$(find frontend/ -name "*.tgz" -type f | head -1)
+        if [ -n "$TGZ_FILE" ]; then
+          echo "Installing $TGZ_FILE"
+          cd frontend
+          TGZ_BASENAME=$(basename "$TGZ_FILE")
+          pnpm add "./$TGZ_BASENAME"
+        else
+          echo "No .tgz file found!"
+          exit 1
+        fi
 
     - name: Clean up artifacts (Built)
       if: ${{ inputs.build_components_angular == 'true' && inputs.components_artifact_name == '' && always() }}
