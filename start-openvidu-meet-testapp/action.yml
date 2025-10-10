@@ -13,6 +13,18 @@ inputs:
     description: 'Skip installing dependencies (assumes they are already installed)'
     required: false
     default: 'false'
+  skip_build_typings:
+    description: 'Skip building TypeScript typings'
+    required: false
+    default: 'false'
+  skip_build_webcomponent:
+    description: 'Skip building the WebComponent'
+    required: false
+    default: 'false'
+  skip_build_testapp:
+    description: 'Skip building the testapp'
+    required: false
+    default: 'false'
 runs:
   using: 'composite'
   steps:
@@ -28,14 +40,17 @@ runs:
       run: ./meet.sh install
 
     - name: Build OpenVidu Meet Typings
+      if: ${{ inputs.skip_build_typings != 'true' }}
       shell: bash
       run: ./meet.sh build-typings --skip-install
 
     - name: Build WebComponent
+      if: ${{ inputs.skip_build_webcomponent != 'true' }}
       shell: bash
       run: ./meet.sh build-webcomponent --skip-install --skip-typings
 
     - name: Build OpenVidu Meet Testapp
+      if: ${{ inputs.skip_build_testapp != 'true' }}
       shell: bash
       run: ./meet.sh build-testapp --skip-install --skip-typings
 
