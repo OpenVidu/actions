@@ -52,10 +52,6 @@ runs:
       shell: bash
       run: |
         echo "Installing custom OpenVidu Components Angular library..."
-        echo "Files in frontend directory:"
-        ls -la frontend/
-        echo "Looking for .tgz files:"
-        find frontend/ -name "*.tgz" -type f
         TGZ_FILE=$(find frontend/ -name "*.tgz" -type f | head -1)
         if [ -n "$TGZ_FILE" ]; then
           echo "Installing $TGZ_FILE"
