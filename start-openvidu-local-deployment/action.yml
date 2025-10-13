@@ -35,6 +35,10 @@ inputs:
     description: "Commands to execute before starting the deployment. The path is the same as the docker-compose.yaml file"
     required: false
     default: ""
+  mode:
+    description: 'Execution mode. Use "--only-pull-images" to only pull and cache Docker images without starting the deployment'
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -114,7 +118,48 @@ runs:
       run: |
         echo "Executing pre-startup commands..."
         ${{ inputs.pre_startup_commands }}
-        
+
+
+    - name: Get Docker Images List
+      id: get-images
+      shell: bash
+      working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      run: |
+        # Get list of images from docker-compose.yaml
+        IMAGES=$(docker compose config | yq e '.services[].image' - | sort | uniq | tr '\n' ' ')
+        echo "images=$IMAGES" >> $GITHUB_OUTPUT
+        # Create a hash for cache key based on images list
+        IMAGES_HASH=$(echo "$IMAGES" | md5sum | cut -d' ' -f1)
+        echo "images-hash=$IMAGES_HASH" >> $GITHUB_OUTPUT
+
+    - name: Restore Docker Images from Cache
+      id: cache-docker-restore
+      if: ${{ inputs.mode != '--only-pull-images' }}
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/docker-images-cache
+        key: docker-images-${{ inputs.openvidu-edition }}-${{ steps.get-images.outputs.images-hash }}
+        restore-keys: |
+          docker-images-${{ inputs.openvidu-edition }}-
+
+    - name: Load Cached Docker Images
+      shell: bash
+      if: ${{ inputs.mode != '--only-pull-images' && steps.cache-docker-restore.outputs.cache-hit == 'true' }}
+      run: |
+        echo "Loading cached Docker images..."
+        CACHE_DIR="$HOME/docker-images-cache"
+
+        if [ -d "$CACHE_DIR" ] && [ "$(ls -A $CACHE_DIR)" ]; then
+          for tar_file in "$CACHE_DIR"/*.tar; do
+            if [ -f "$tar_file" ]; then
+              echo "Loading: $tar_file"
+              docker load < "$tar_file" || echo "Failed to load: $tar_file"
+            fi
+          done
+          echo "Cached images loaded successfully"
+        else
+          echo "No cached images found"
+        fi
 
     - name: Configure OpenVidu Local Deployment
       shell: bash
@@ -130,18 +175,55 @@ runs:
             yq e -i '.services.openvidu.environment += ["MEDIASOUP_WORKER_BIN='${MEDIASOUP_WORKER_BIN:-}'"]' docker-compose.yaml
           fi
         fi
-        docker compose down -v
-        docker compose pull --ignore-pull-failures
+
+        if [ "${{ inputs.mode }}" = "--only-pull-images" ]; then
+          echo "Mode: Only pulling images..."
+          docker compose pull --ignore-pull-failures
+          echo "Images pulled successfully."
+        else
+          docker compose down -v
+          # Pull only missing images (cached ones are already loaded)
+          docker compose pull --ignore-pull-failures
+        fi
+
+    - name: Save Docker Images to Cache Directory
+      shell: bash
+      working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      if: ${{ steps.cache-docker-restore.outputs.cache-hit != 'true' }}
+      run: |
+        echo "Saving Docker images for caching..."
+        CACHE_DIR="$HOME/docker-images-cache"
+        mkdir -p "$CACHE_DIR"
+
+        # Get list of images from docker-compose.yaml
+        IMAGES=$(docker compose config | yq e '.services[].image' - | sort | uniq)
+
+        for image in $IMAGES; do
+          CACHE_FILE="$CACHE_DIR/$(echo "$image" | sed 's/[:/]/__/g').tar"
+          echo "Saving image: $image"
+          docker save "$image" > "$CACHE_FILE" || echo "Failed to save image: $image"
+        done
+
+        echo "Image saving completed."
+
+    - name: Save Docker Images to GitHub Cache
+      if: ${{ steps.cache-docker-restore.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@v4
+      with:
+        path: ~/docker-images-cache
+        key: docker-images-${{ inputs.openvidu-edition }}-${{ steps.get-images.outputs.images-hash }}
 
     - name: Run OpenVidu Local Deployment
       shell: bash
       working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      if: ${{ inputs.mode != '--only-pull-images' }}
       run: |
         docker compose up -d
 
     - name: Wait until OpenVidu Local Deployment ready
       shell: bash
       working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      if: ${{ inputs.mode != '--only-pull-images' }}
       run: |
         CONTAINER_NAME_PART="ready-check"
         TIMEOUT_MS=${{ inputs.timeout }}
