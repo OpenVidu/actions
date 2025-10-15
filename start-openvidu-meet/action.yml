@@ -9,6 +9,10 @@ inputs:
     description: Skip starting the backend server (only build and prepare)
     required: false
     default: 'false'
+  skip_install:
+    description: Skip installing dependencies (assumes they are already installed)
+    required: false
+    default: 'false'
   build_components_angular:
     description: Build and include latest OpenVidu Components Angular library in frontend
     required: false
@@ -41,15 +45,22 @@ runs:
       uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.components_artifact_name != '' && inputs.components_artifact_name || steps.build_components.outputs.artifact_name }}
-        path: frontend
+        path: meet-ce/frontend
 
     - name: Install Custom OpenVidu Components Angular
       if: ${{ inputs.build_components_angular == 'true' }}
       shell: bash
       run: |
         echo "Installing custom OpenVidu Components Angular library..."
-        cd frontend
-        npm install openvidu-components-angular.tgz
+        TGZ_FILE=$(find meet-ce/frontend/ -name "*.tgz" -type f | head -1)
+        if [ -n "$TGZ_FILE" ]; then
+          echo "Installing $TGZ_FILE"
+          TGZ_BASENAME=$(basename "$TGZ_FILE")
+          pnpm -filter openvidu-meet-frontend add "./$TGZ_BASENAME"
+        else
+          echo "No .tgz file found!"
+          exit 1
+        fi
 
     - name: Clean up artifacts (Built)
       if: ${{ inputs.build_components_angular == 'true' && inputs.components_artifact_name == '' && always() }}
@@ -57,16 +68,19 @@ runs:
       with:
         name: ${{ steps.build_components.outputs.artifact_name }}
 
-    - name: Prepare OpenVidu Meet
+    - name: Install dependencies
+      if: ${{ inputs.skip_install != 'true' }}
       shell: bash
-      run: |
-        ./prepare.sh
-        if [ "${{ inputs.skip_backend_start }}" != "true" ]; then
-          cd backend
-          npm run start:ci > meet_backend.log 2>&1 &
-        else
-          echo "Skipping backend start as requested"
-        fi
+      run: ./meet.sh install
+
+    - name: Build OpenVidu Meet
+      shell: bash
+      run: ./meet.sh build --skip-install
+
+    - name: Start OpenVidu Meet
+      if: ${{ inputs.skip_backend_start != 'true' }}
+      shell: bash
+      run: ./meet.sh start --ci --skip-install > meet_backend.log 2>&1 &
 
     - name: Wait for OpenVidu Meet to Start
       if: ${{ inputs.skip_backend_start != 'true' }}

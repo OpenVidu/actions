@@ -9,6 +9,22 @@ inputs:
     description: 'Skip repository checkout (use when repository is already checked out)'
     required: false
     default: 'false'
+  skip_install:
+    description: 'Skip installing dependencies (assumes they are already installed)'
+    required: false
+    default: 'false'
+  skip_build_typings:
+    description: 'Skip building TypeScript typings'
+    required: false
+    default: 'false'
+  skip_build_webcomponent:
+    description: 'Skip building the WebComponent'
+    required: false
+    default: 'false'
+  skip_build_testapp:
+    description: 'Skip building the testapp'
+    required: false
+    default: 'false'
 runs:
   using: 'composite'
   steps:
@@ -18,18 +34,31 @@ runs:
       with:
         ref: ${{ github.ref }}
 
-    - name: Prepare OpenVidu Meet Testapp
+    - name: Install dependencies
+      if: ${{ inputs.skip_install != 'true' }}
       shell: bash
-      run: |
-        echo "Preparing OpenVidu Meet testapp..."
-        ./prepare.sh --typings --webcomponent --testapp
+      run: ./meet.sh install
+
+    - name: Build OpenVidu Meet Typings
+      if: ${{ inputs.skip_build_typings != 'true' }}
+      shell: bash
+      run: ./meet.sh build-typings --skip-install
+
+    - name: Build WebComponent
+      if: ${{ inputs.skip_build_webcomponent != 'true' }}
+      shell: bash
+      run: ./meet.sh build-webcomponent --skip-install --skip-typings
+
+    - name: Build OpenVidu Meet Testapp
+      if: ${{ inputs.skip_build_testapp != 'true' }}
+      shell: bash
+      run: ./meet.sh build-testapp --skip-install --skip-typings
 
     - name: Start OpenVidu Meet Testapp
       shell: bash
       run: |
         echo "Starting OpenVidu Meet testapp..."
-        cd testapp
-        npm run start > testapp.log 2>&1 &
+        ./meet.sh start-testapp --skip-install > testapp.log 2>&1 &
         echo "Testapp started in background"
 
     - name: Wait for OpenVidu Meet Testapp to Start
