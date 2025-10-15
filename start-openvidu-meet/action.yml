@@ -45,19 +45,18 @@ runs:
       uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.components_artifact_name != '' && inputs.components_artifact_name || steps.build_components.outputs.artifact_name }}
-        path: frontend
+        path: meet-ce/frontend
 
     - name: Install Custom OpenVidu Components Angular
       if: ${{ inputs.build_components_angular == 'true' }}
       shell: bash
       run: |
         echo "Installing custom OpenVidu Components Angular library..."
-        TGZ_FILE=$(find frontend/ -name "*.tgz" -type f | head -1)
+        TGZ_FILE=$(find meet-ce/frontend/ -name "*.tgz" -type f | head -1)
         if [ -n "$TGZ_FILE" ]; then
           echo "Installing $TGZ_FILE"
-          cd frontend
           TGZ_BASENAME=$(basename "$TGZ_FILE")
-          pnpm add "./$TGZ_BASENAME"
+          pnpm -filter openvidu-meet-frontend add "./$TGZ_BASENAME"
         else
           echo "No .tgz file found!"
           exit 1
