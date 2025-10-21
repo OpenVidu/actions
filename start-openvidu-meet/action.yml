@@ -56,7 +56,7 @@ runs:
         if [ -n "$TGZ_FILE" ]; then
           echo "Installing $TGZ_FILE"
           TGZ_BASENAME=$(basename "$TGZ_FILE")
-          pnpm --filter @openvidu-meet/frontend add "./$TGZ_BASENAME"
+          pnpm --filter @openvidu-meet/frontend --filter @openvidu-meet/shared-components add "./$TGZ_BASENAME"
         else
           echo "No .tgz file found!"
           exit 1
