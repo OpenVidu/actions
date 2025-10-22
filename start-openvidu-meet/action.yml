@@ -87,7 +87,7 @@ runs:
     - name: Install dependencies
       if: ${{ inputs.skip_install != 'true' }}
       shell: bash
-      run: ./meet.sh install
+      run: pnpm install --no-frozen-lockfile
 
     - name: Build OpenVidu Meet
       shell: bash
