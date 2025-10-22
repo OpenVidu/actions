@@ -71,9 +71,9 @@ runs:
         fi
 
         # Shared components package.json (dependencies and peerDependencies)
-        if [ -f "meet-ce/frontend/projects/meet-shared-components/package.json" ]; then
-          sed -i 's|"openvidu-components-angular": "workspace:\*"|"openvidu-components-angular": "file:../../'$TGZ_BASENAME'"|g' meet-ce/frontend/projects/meet-shared-components/package.json
-          echo "✓ Updated meet-ce/frontend/projects/meet-shared-components/package.json"
+        if [ -f "meet-ce/frontend/projects/shared-meet-components/package.json" ]; then
+          sed -i 's|"openvidu-components-angular": "workspace:\*"|"openvidu-components-angular": "^3.0.0"|g' meet-ce/frontend/projects/shared-meet-components/package.json
+          echo "✓ Updated meet-ce/frontend/projects/shared-meet-components/package.json"
         fi
 
         echo "All workspace references replaced successfully"
