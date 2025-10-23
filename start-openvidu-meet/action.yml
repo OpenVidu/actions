@@ -59,11 +59,6 @@ runs:
       with:
         name: ${{ steps.build_components.outputs.artifact_name }}
 
-    - name: Install dependencies
-      if: ${{ inputs.skip_install != 'true' }}
-      shell: bash
-      run: pnpm install --no-frozen-lockfile
-
     - name: Build OpenVidu Meet
       shell: bash
       run: ./meet.sh build --skip-install
