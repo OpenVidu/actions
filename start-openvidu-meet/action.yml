@@ -50,33 +50,8 @@ runs:
     - name: Install Custom OpenVidu Components Angular
       if: ${{ inputs.build_components_angular == 'true' }}
       shell: bash
-      run: |
-        echo "Installing custom OpenVidu Components Angular library..."
-        TGZ_FILE=$(find meet-ce/frontend/ -name "*.tgz" -type f | head -1)
-        if [ -z "$TGZ_FILE" ]; then
-          echo "No .tgz file found!"
-          exit 1
-        fi
+      run: ./meet.sh prepare-ci-build --components-angular-tarball ./meet-ce/frontend/openvidu-components-angular.tgz
 
-        echo "Found package: $TGZ_FILE"
-        TGZ_BASENAME=$(basename "$TGZ_FILE")
-
-        # Replace workspace:* references with file path in all package.json files
-        echo "Replacing 'openvidu-components-angular': 'workspace:*' references..."
-
-        # Frontend package.json
-        if [ -f "meet-ce/frontend/package.json" ]; then
-          sed -i 's|"openvidu-components-angular": "workspace:\*"|"openvidu-components-angular": "file:./'$TGZ_BASENAME'"|g' meet-ce/frontend/package.json
-          echo "✓ Updated meet-ce/frontend/package.json"
-        fi
-
-        # Shared components package.json (dependencies and peerDependencies)
-        if [ -f "meet-ce/frontend/projects/shared-meet-components/package.json" ]; then
-          sed -i 's|"openvidu-components-angular": "workspace:\*"|"openvidu-components-angular": "^3.0.0"|g' meet-ce/frontend/projects/shared-meet-components/package.json
-          echo "✓ Updated meet-ce/frontend/projects/shared-meet-components/package.json"
-        fi
-
-        echo "All workspace references replaced successfully"
 
     - name: Clean up artifacts (Built)
       if: ${{ inputs.build_components_angular == 'true' && inputs.components_artifact_name == '' && always() }}
