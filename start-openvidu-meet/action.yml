@@ -47,7 +47,7 @@ runs:
         name: ${{ inputs.components_artifact_name != '' && inputs.components_artifact_name || steps.build_components.outputs.artifact_name }}
         path: meet-ce/frontend
 
-    - name: Install Custom OpenVidu Components Angular
+    - name: Prepare workspace for CI
       if: ${{ inputs.build_components_angular == 'true' }}
       shell: bash
       run: ./meet.sh prepare-ci-build --components-angular-tarball ./meet-ce/frontend/openvidu-components-angular.tgz
