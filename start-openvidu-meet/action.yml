@@ -20,7 +20,7 @@ inputs:
   components_checkout_ref:
     description: Branch, tag, or commit to checkout for OpenVidu Components Angular
     required: false
-    default: ''
+    default: 'master'
   components_artifact_name:
     description: Name of existing artifact with OpenVidu Components Angular package (if provided, skips building)
     required: false
@@ -32,7 +32,7 @@ runs:
       id: build_components
       uses: OpenVidu/actions/build-openvidu-components-angular@main
       with:
-        checkout_ref: ${{ inputs.components_checkout_ref || github.ref_name }}
+        checkout_ref: ${{ inputs.components_checkout_ref }}
         artifact_name: 'openvidu-components-angular-temp'
 
     - name: Checkout OpenVidu Meet
