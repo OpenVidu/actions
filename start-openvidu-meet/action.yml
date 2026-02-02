@@ -72,13 +72,13 @@ runs:
       if: ${{ inputs.skip_backend_start != 'true' }}
       shell: bash
       run: |
-        echo "Waiting for OpenVidu Meet to be available at http://localhost:6080/health..."
+        echo "Waiting for OpenVidu Meet to be available at http://localhost:6080/meet/health..."
         timeout_ms=${{ inputs.timeout }}
         timeout_s=$((timeout_ms / 1000))
         start_time=$(date +%s)
 
         while true; do
-          if curl -s -f http://localhost:6080/health > /dev/null 2>&1; then
+          if curl -s -f http://localhost:6080/meet/health > /dev/null 2>&1; then
             echo "OpenVidu Meet is up and running!"
             break
           fi

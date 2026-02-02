@@ -39,7 +39,7 @@ steps:
   - name: Run tests against OpenVidu Meet
     run: |
       # Your test commands here
-      # OpenVidu Meet will be available at http://localhost:6080/
+      # OpenVidu Meet will be available at http://localhost:6080/meet
 ```
 
 ### Prepare OpenVidu Meet without Starting Backend
@@ -130,7 +130,7 @@ jobs:
 - When `skip_backend_start` is `false` (default):
 
   - The backend is started using `npm run start:ci` in background mode
-  - The action waits until the backend is responding at the healthcheck endpoint (`http://localhost:6080/health`)
+  - The action waits until the backend is responding at the healthcheck endpoint (`http://localhost:6080/meet/health`)
   - If the backend doesn't start within the timeout period, the action will fail
 
 - When `skip_backend_start` is `true`:
