@@ -114,7 +114,17 @@ runs:
       run: |
         echo "Executing pre-startup commands..."
         ${{ inputs.pre_startup_commands }}
-        
+
+    - name: Configure private IP linux in all deployments
+      shell: bash
+      working-directory: ./openvidu-local-deployment
+      run: |
+        pushd pro
+        ./configure_lan_private_ip_linux.sh
+        popd
+        pushd community
+        ./configure_lan_private_ip_linux.sh
+        popd
 
     - name: Configure OpenVidu Local Deployment
       shell: bash
@@ -122,7 +132,6 @@ runs:
       env:
         MEDIASOUP_WORKER_BIN: ${{ inputs.mediasoup-worker-bin || steps.setup-mediasoup-worker.outputs.MEDIASOUP_WORKER_BIN }}
       run: |
-        ./configure_lan_private_ip_linux.sh
         if [ "${{ inputs.openvidu-edition }}" = "pro" ]; then
           yq e -i '.openvidu.rtc.engine = "${{ inputs.rtc-engine }}"' livekit.yaml
           yq e -i '.openvidu.rtc.engine = "${{ inputs.rtc-engine }}"' ingress.yaml
