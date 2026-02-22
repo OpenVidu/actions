@@ -57,6 +57,7 @@ runs:
           echo "MEDIASOUP_WORKER_BIN=$MEDIASOUP_WORKER_PATH" >> $GITHUB_OUTPUT
           chmod +x "$MEDIASOUP_WORKER_PATH"
         else
+          mv "${{ github.workspace }}/mediasoup-worker-amd64" "${{ github.workspace }}/mediasoup-worker"
           MEDIASOUP_WORKER_PATH="${{ github.workspace }}/mediasoup-worker"
           echo "MEDIASOUP_WORKER_BIN=$MEDIASOUP_WORKER_PATH" >> $GITHUB_OUTPUT
           chmod +x "$MEDIASOUP_WORKER_PATH"
