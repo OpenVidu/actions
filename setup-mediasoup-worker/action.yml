@@ -45,7 +45,7 @@ runs:
       with:
         repo: OpenVidu/openvidu-pro-mediasoup
         version: tags/v3.12.16-openvidu3
-        file: mediasoup-worker
+        file: mediasoup-worker-amd64
         token: ${{ inputs.github-token }}
 
     - name: Output mediasoup-worker binary path to MEDIASOUP_WORKER_BIN
