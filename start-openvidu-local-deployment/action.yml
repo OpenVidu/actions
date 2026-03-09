@@ -58,7 +58,8 @@ runs:
     - name: Install required packages
       shell: bash
       run: |
-        sudo apt update && sudo apt install -y build-essential jq
+        sudo apt-get update
+        sudo apt-get install -y build-essential jq
         sudo wget https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
 
     - name: Setup mediasoup-worker
