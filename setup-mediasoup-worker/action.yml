@@ -44,7 +44,7 @@ runs:
       uses: dsaltares/fetch-gh-release-asset@master
       with:
         repo: OpenVidu/openvidu-pro-mediasoup
-        version: tags/v3.12.16-openvidu3
+        version: tags/v3.19.17-openvidu3
         file: mediasoup-worker-amd64
         token: ${{ inputs.github-token }}
 
