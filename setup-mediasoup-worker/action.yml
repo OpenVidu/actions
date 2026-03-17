@@ -39,12 +39,21 @@ runs:
       working-directory: ./openvidu-pro-mediasoup/mediasoup/worker
       run: make
 
+    - id: get-openvidu-pro-mediasoup-latest-release
+      name: Get openvidu-pro-mediasoup latest release
+      if: ${{ inputs.ref-openvidu-pro-mediasoup == 'default' }}
+      uses: pozetroninc/github-action-get-latest-release@master
+      with:
+        repository: OpenVidu/openvidu-pro-mediasoup
+        excludes: prerelease, draft
+        token: ${{ inputs.github-token }}
+
     - name: Download mediasoup-worker
       if: ${{ inputs.ref-openvidu-pro-mediasoup == 'default' }}
       uses: dsaltares/fetch-gh-release-asset@master
       with:
         repo: OpenVidu/openvidu-pro-mediasoup
-        version: tags/v3.19.17-openvidu3
+        version: tags/${{ steps.get-openvidu-pro-mediasoup-latest-release.outputs.release }}
         file: mediasoup-worker-amd64
         token: ${{ inputs.github-token }}
 
