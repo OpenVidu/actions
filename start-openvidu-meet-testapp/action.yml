@@ -30,7 +30,7 @@ runs:
   steps:
     - name: Checkout OpenVidu Meet
       if: ${{ inputs.skip_checkout != 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         ref: ${{ github.ref }}
 

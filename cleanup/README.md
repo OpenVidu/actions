@@ -23,7 +23,7 @@ This action has no configurable inputs.
 ```yaml
 steps:
   - name: Checkout
-    uses: actions/checkout@v4
+    uses: actions/checkout@v6
 
   # Run your OpenVidu tests here...
 

@@ -39,7 +39,7 @@ This action automates the process of starting an AWS EC2 runner by:
 ```yaml
 steps:
   - name: Checkout
-    uses: actions/checkout@v4
+    uses: actions/checkout@v6
 
   - name: Start AWS EC2 Runner
     id: start-runner

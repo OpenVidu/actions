@@ -29,7 +29,7 @@ This action automates the process of setting up and optionally running the OpenV
 ```yaml
 steps:
   - name: Checkout
-    uses: actions/checkout@v4
+    uses: actions/checkout@v6
 
   - name: Start OpenVidu Meet Backend
     uses: OpenVidu/actions/start-openvidu-meet@main
@@ -47,7 +47,7 @@ steps:
 ```yaml
 steps:
   - name: Checkout
-    uses: actions/checkout@v4
+    uses: actions/checkout@v6
 
   - name: Prepare OpenVidu Meet (without starting backend)
     uses: OpenVidu/actions/start-openvidu-meet@main
@@ -67,7 +67,7 @@ steps:
 ```yaml
 steps:
   - name: Checkout
-    uses: actions/checkout@v4
+    uses: actions/checkout@v6
 
   - name: Start OpenVidu Meet with Latest Components
     uses: OpenVidu/actions/start-openvidu-meet@main
@@ -85,7 +85,7 @@ steps:
 ```yaml
 steps:
   - name: Checkout
-    uses: actions/checkout@v4
+    uses: actions/checkout@v6
 
   - name: Start OpenVidu Meet with Fork Components
     uses: OpenVidu/actions/start-openvidu-meet@main

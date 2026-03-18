@@ -34,7 +34,7 @@ The action performs the following operations:
 ```yaml
 steps:
   - name: Checkout
-    uses: actions/checkout@v4
+    uses: actions/checkout@v6
 
   - name: Setup OpenVidu Local Deployment
     uses: OpenVidu/actions/start-openvidu-local-deployment@main

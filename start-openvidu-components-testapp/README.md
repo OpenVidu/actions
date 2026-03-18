@@ -23,10 +23,10 @@ This action automates the process of setting up and running the openvidu-compone
 ```yaml
 steps:
   - name: Checkout
-    uses: actions/checkout@v4
+    uses: actions/checkout@v6
 
   - name: Checkout OpenVidu Components Angular
-    uses: actions/checkout@v4
+    uses: actions/checkout@v6
     with:
       repository: OpenVidu/openvidu-components-angular
       path: openvidu-components-angular

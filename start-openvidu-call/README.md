@@ -23,7 +23,7 @@ This action automates the process of setting up an OpenVidu Call backend by:
 ```yaml
 steps:
   - name: Checkout
-    uses: actions/checkout@v4
+    uses: actions/checkout@v6
 
   - name: Setup OpenVidu Call Backend
     uses: OpenVidu/actions/start-openvidu-call@main

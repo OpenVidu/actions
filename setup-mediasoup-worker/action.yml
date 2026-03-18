@@ -20,7 +20,7 @@ runs:
   steps:
     - name: Checkout OpenVidu/openvidu-pro-mediasoup
       if: ${{ inputs.ref-openvidu-pro-mediasoup != 'default' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: OpenVidu/openvidu-pro-mediasoup
         path: openvidu-pro-mediasoup

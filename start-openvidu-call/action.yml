@@ -13,7 +13,7 @@ runs:
   using: 'composite'
   steps:
     - name: Checkout OpenVidu Call
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: OpenVidu/openvidu-call
         ref: ${{ inputs.branch }}
