@@ -67,7 +67,7 @@ runs:
         echo "OpenVidu Components Angular built successfully"
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.build.outputs.unique_artifact_name }}
         path: components-source/openvidu-components-angular/dist/openvidu-components-angular/openvidu-components-angular.tgz
