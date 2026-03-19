@@ -198,3 +198,12 @@ runs:
             exit 1
           fi
         done
+
+    - name: Log running OpenVidu Local Deployment containers
+      shell: bash
+      working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      run: |
+        docker ps --format "{{.Names}}\t{{.Image}}\t{{.Status}}" | while IFS=$'\t' read name image status; do
+          digest=$(docker image inspect "$image" --format '{{index .RepoDigests 0}}' 2>/dev/null | cut -d'@' -f2)
+          printf "%-30s %-40s %-20s %s\n" "$name" "$image" "$status" "${digest:-N/A}"
+        done
