@@ -103,7 +103,7 @@ jobs:
     steps:
       - name: Build Components Angular
         id: build
-        uses: OpenVidu/actions/build-openvidu-components-angular@main
+        uses: OpenVidu/actions/build-openvidu-components-angular@<sha-256> # v<version>
         with:
           checkout_ref: 'v3.0.0'
           artifact_name: 'shared-components'

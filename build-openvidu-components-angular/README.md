@@ -34,7 +34,7 @@ This action automates the process of building the OpenVidu Components Angular li
 steps:
     - name: Build OpenVidu Components Angular
       id: build
-      uses: OpenVidu/actions/build-openvidu-components-angular@main
+      uses: OpenVidu/actions/build-openvidu-components-angular@commit-sha # v<version>
       with:
           checkout_ref: 'v3.0.0'
 
@@ -51,7 +51,7 @@ steps:
 steps:
     - name: Build OpenVidu Components Angular
       id: build
-      uses: OpenVidu/actions/build-openvidu-components-angular@main
+      uses: OpenVidu/actions/build-openvidu-components-angular@commit-sha # v<version>
       with:
           checkout_ref: 'master'
           artifact_name: 'my-custom-components'

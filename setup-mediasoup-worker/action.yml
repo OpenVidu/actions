@@ -20,7 +20,7 @@ runs:
   steps:
     - name: Checkout OpenVidu/openvidu-pro-mediasoup
       if: ${{ inputs.ref-openvidu-pro-mediasoup != 'default' }}
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         repository: OpenVidu/openvidu-pro-mediasoup
         path: openvidu-pro-mediasoup
@@ -29,7 +29,7 @@ runs:
 
     - name: Setup Python
       if: ${{ inputs.ref-openvidu-pro-mediasoup != 'default' }}
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
         python-version: "3.13"
 
@@ -42,7 +42,7 @@ runs:
     - id: get-openvidu-pro-mediasoup-latest-release
       name: Get openvidu-pro-mediasoup latest release
       if: ${{ inputs.ref-openvidu-pro-mediasoup == 'default' }}
-      uses: pozetroninc/github-action-get-latest-release@master
+      uses: pozetroninc/github-action-get-latest-release@2a61c339ea7ef0a336d1daa35ef0cb1418e7676c # v0.8.0
       with:
         repository: OpenVidu/openvidu-pro-mediasoup
         excludes: prerelease, draft
@@ -50,7 +50,7 @@ runs:
 
     - name: Download mediasoup-worker
       if: ${{ inputs.ref-openvidu-pro-mediasoup == 'default' }}
-      uses: dsaltares/fetch-gh-release-asset@master
+      uses: dsaltares/fetch-gh-release-asset@aa2ab1243d6e0d5b405b973c89fa4d06a2d0fff7 # 1.1.2
       with:
         repo: OpenVidu/openvidu-pro-mediasoup
         version: tags/${{ steps.get-openvidu-pro-mediasoup-latest-release.outputs.release }}

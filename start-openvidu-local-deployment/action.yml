@@ -40,14 +40,14 @@ runs:
   using: "composite"
   steps:
     - name: Checkout OpenVidu/openvidu-local-deployment
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         repository: OpenVidu/openvidu-local-deployment
         ref: ${{ inputs.ref-openvidu-local-deployment }}
         path: openvidu-local-deployment
 
     - name: Checkout OpenVidu/openvidu-pro-mediasoup
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.ref-openvidu-pro-mediasoup != 'default' && inputs.mediasoup-worker-bin == '' }}
       with:
         repository: OpenVidu/openvidu-pro-mediasoup
@@ -65,7 +65,7 @@ runs:
     - name: Setup mediasoup-worker
       if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.mediasoup-worker-bin == '' }}
       id: setup-mediasoup-worker
-      uses: OpenVidu/actions/setup-mediasoup-worker@main
+      uses: OpenVidu/actions/setup-mediasoup-worker@90355728654c6cb4db8e59fd9733824051f874b3 # v1.0.0
       with:
         ref-openvidu-pro-mediasoup: ${{ inputs.ref-openvidu-pro-mediasoup }}
         github-token: ${{ inputs.github-token }}
