@@ -37,7 +37,7 @@ steps:
     uses: actions/checkout@v6
 
   - name: Setup OpenVidu Local Deployment
-    uses: OpenVidu/actions/start-openvidu-local-deployment@main
+    uses: OpenVidu/actions/start-openvidu-local-deployment@<sha-256> # v<version>
     with:
       ref-openvidu-local-deployment: "main" # Optional: specify a different branch
       timeout: "120000" # Optional: extend timeout to 2 minutes

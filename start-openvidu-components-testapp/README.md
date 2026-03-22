@@ -32,7 +32,7 @@ steps:
       path: openvidu-components-angular
 
   - name: Start OpenVidu Components Testapp
-    uses: OpenVidu/actions/start-openvidu-components-testapp@main
+    uses: OpenVidu/actions/start-openvidu-components-testapp@<sha-256> # v<version>
     with:
       timeout: '120000'  # Optional: extend timeout to 2 minutes
 

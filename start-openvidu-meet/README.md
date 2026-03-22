@@ -32,7 +32,7 @@ steps:
     uses: actions/checkout@v6
 
   - name: Start OpenVidu Meet Backend
-    uses: OpenVidu/actions/start-openvidu-meet@main
+    uses: OpenVidu/actions/start-openvidu-meet@<sha-256> # v<version>
     with:
       timeout: '120000' # Optional: extend timeout to 2 minutes
 
@@ -50,7 +50,7 @@ steps:
     uses: actions/checkout@v6
 
   - name: Prepare OpenVidu Meet (without starting backend)
-    uses: OpenVidu/actions/start-openvidu-meet@main
+    uses: OpenVidu/actions/start-openvidu-meet@<sha-256> # v<version>
     with:
       skip_backend_start: 'true'
 
@@ -70,7 +70,7 @@ steps:
     uses: actions/checkout@v6
 
   - name: Start OpenVidu Meet with Latest Components
-    uses: OpenVidu/actions/start-openvidu-meet@main
+    uses: OpenVidu/actions/start-openvidu-meet@<sha-256> # v<version>
     with:
       build_components_angular: 'false'
 
@@ -88,7 +88,7 @@ steps:
     uses: actions/checkout@v6
 
   - name: Start OpenVidu Meet with Fork Components
-    uses: OpenVidu/actions/start-openvidu-meet@main
+    uses: OpenVidu/actions/start-openvidu-meet@<sha-256> # v<version>
     with:
       build_components_angular: 'true'
       components_checkout_ref: 'feature-branch'
@@ -115,7 +115,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Start OpenVidu Meet with Pre-built Components
-        uses: OpenVidu/actions/start-openvidu-meet@main
+        uses: OpenVidu/actions/start-openvidu-meet@<sha-256> # v<version>
         with:
           build_components_angular: 'true'
           components_artifact_name: ${{ needs.build-components.outputs.artifact_name }}
