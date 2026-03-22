@@ -65,7 +65,7 @@ runs:
     - name: Setup mediasoup-worker
       if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.mediasoup-worker-bin == '' }}
       id: setup-mediasoup-worker
-      uses: OpenVidu/actions/setup-mediasoup-worker@90355728654c6cb4db8e59fd9733824051f874b3 # v1.0.0
+      uses: OpenVidu/actions/setup-mediasoup-worker@75a45bb035204455a22016d78b28d7370a39432f # v1.0.1
       with:
         ref-openvidu-pro-mediasoup: ${{ inputs.ref-openvidu-pro-mediasoup }}
         github-token: ${{ inputs.github-token }}
