@@ -1,6 +1,14 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "/build-openvidu-components-angular"
+      - "/setup-mediasoup-worker"
+      - "/start-aws-runner"
+      - "/start-openvidu-call"
+      - "/start-openvidu-local-deployment"
+      - "/start-openvidu-meet-testapp"
+      - "/start-openvidu-meet"
+      - "/stop-aws-runner"
     schedule:
       interval: "weekly"
