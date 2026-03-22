@@ -31,7 +31,7 @@ runs:
         aws-region: ${{ inputs.aws-region }}
 
     - name: Stop EC2 runner
-      uses: machulav/ec2-github-runner@a6dbcefcf8a31a861f5e078bb153ed332130c512 # v2.4.3
+      uses: machulav/ec2-github-runner@a00f575a87f3a96ec6de9413d16eeb828a3cc0a8 # v2.5.2
       with:
         mode: stop
         github-token: ${{ inputs.github-token }}
