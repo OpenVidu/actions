@@ -5,4 +5,7 @@ Automate your OpenVidu workflows in GitHub Actions
 
 Run the workflow [Release and Update Pinned Actions](https://github.com/OpenVidu/actions/actions/workflows/update-pinned-actions.yml).
 
-It will update all references to OpenVidu/actions in all repositories in the OpenVidu organization (in their default branch), and create a pull request with the changes in each repository.
+It will:
+1. Create a new release of OpenVidu
+2. Update all references to OpenVidu/actions in all repositories in the OpenVidu organization (in their default branch).
+3. Create a PR in each repository with the changes.
