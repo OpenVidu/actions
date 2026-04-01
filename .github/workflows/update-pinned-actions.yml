@@ -62,13 +62,12 @@ jobs:
 
           echo "Searching for repositories using OpenVidu/actions..."
           search_output=$(
-            gh search code "uses: OpenVidu/actions/" \
+            gh search code "OpenVidu/actions/" \
               --owner OpenVidu \
-              --filename '*.yml' --filename '*.yaml' \
-              --match file \
-              -L 200 \
+              --extension yml --extension yaml \
+              -L 1000 \
               --json repository \
-              --jq '[.[].repository.fullName] | unique | .[]'
+              --jq '[.[].repository.nameWithOwner] | unique | .[]'
           )
 
           if [[ -z "$search_output" ]]; then
