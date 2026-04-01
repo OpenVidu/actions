@@ -55,8 +55,13 @@ jobs:
         run: |
           set -euo pipefail
 
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::error::GH_PAT secret is not set. A PAT with org-wide repo access is required."
+            exit 1
+          fi
+
           echo "Searching for repositories using OpenVidu/actions..."
-          mapfile -t repos < <(
+          search_output=$(
             gh search code "uses: OpenVidu/actions/" \
               --owner OpenVidu \
               --filename '*.yml' --filename '*.yaml' \
@@ -66,10 +71,12 @@ jobs:
               --jq '[.[].repository.fullName] | unique | .[]'
           )
 
-          if [[ ${#repos[@]} -eq 0 ]]; then
+          if [[ -z "$search_output" ]]; then
             echo "No repositories found using OpenVidu/actions"
             exit 0
           fi
+
+          mapfile -t repos <<< "$search_output"
 
           echo "Found ${#repos[@]} repositories:"
           printf '  %s\n' "${repos[@]}"
