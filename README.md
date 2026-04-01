@@ -15,4 +15,6 @@ go install github.com/suzuki-shunsuke/pinact/v3/cmd/pinact@<version>
 pinact run -u
 ```
 
+3. For this particular repository, you need to create a new Release with a new version, and execute `pinact run -u` in the repositories which make use of the pined actions.
+
 > Take into account the command updates all actions. If you want to only update one actions you need to revert the other updates...
