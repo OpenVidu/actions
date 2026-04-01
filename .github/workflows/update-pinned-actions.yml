@@ -49,14 +49,14 @@ jobs:
 
       - name: Find and update repositories
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.OPENVIDU_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.OPENVIDU_GITHUB_TOKEN }}
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
 
           if [[ -z "$GH_TOKEN" ]]; then
-            echo "::error::GH_PAT secret is not set. A PAT with org-wide repo access is required."
+            echo "::error::OPENVIDU_GITHUB_TOKEN secret is not set. A PAT with org-wide repo access is required."
             exit 1
           fi
 
