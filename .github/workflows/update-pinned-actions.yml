@@ -50,6 +50,8 @@ jobs:
             exit 1
           fi
 
+          gh auth setup-git
+
           tag_sha="$TAG_SHA"
           echo "Release ${VERSION} pinned to SHA ${tag_sha}"
 
