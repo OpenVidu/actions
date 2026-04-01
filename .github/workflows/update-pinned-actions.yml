@@ -116,7 +116,12 @@ jobs:
               git config user.email "github-actions[bot]@users.noreply.github.com"
               git add -A
               git commit -m "chore: update OpenVidu/actions to ${VERSION}"
-              git push origin "$branch"
+              git push origin "$branch" || {
+                echo "::warning::Failed to push to $repo. Ensure OPENVIDU_GITHUB_TOKEN has the 'workflow' scope."
+                popd > /dev/null
+                rm -rf "$work_dir"
+                continue
+              }
 
               default_branch=$(gh repo view "$repo" --json defaultBranchRef --jq '.defaultBranchRef.name')
               pr_body="Updates pinned references of \`OpenVidu/actions\` to \`${VERSION}\`."
