@@ -62,12 +62,13 @@ jobs:
 
           echo "Searching for repositories using OpenVidu/actions..."
           search_output=$(
-            gh search code "OpenVidu/actions/" \
-              --owner OpenVidu \
-              --extension yml --extension yaml \
-              -L 1000 \
-              --json repository \
-              --jq '[.[].repository.nameWithOwner] | unique | .[]'
+            gh api search/code \
+              -X GET \
+              --paginate \
+              -f per_page=100 \
+              -f q='uses: OpenVidu/actions/ org:OpenVidu language:yaml' \
+              --jq '.items[].repository.full_name' \
+            | sort -u
           )
 
           if [[ -z "$search_output" ]]; then
@@ -85,11 +86,6 @@ jobs:
             echo "========================================="
             echo "Processing $repo..."
             echo "========================================="
-
-            if [[ "$repo" == "OpenVidu/actions" ]]; then
-              echo "Skipping OpenVidu/actions (this repository)"
-              continue
-            fi
 
             work_dir=$(mktemp -d)
             if ! gh repo clone "$repo" "$work_dir" -- --depth 1; then
