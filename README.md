@@ -1,2 +1,18 @@
 # actions
 Automate your OpenVidu workflows in GitHub Actions
+
+# How to update pined actions
+
+1. Install the `pinact` tool:
+
+```bash
+go install github.com/suzuki-shunsuke/pinact/v3/cmd/pinact@<version>
+```
+
+2. Execute in the repository with pined actions
+
+```
+pinact run -u
+```
+
+> Take into account the command updates all actions. If you want to only update one actions you need to revert the other updates...
