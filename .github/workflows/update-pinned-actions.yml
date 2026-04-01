@@ -7,11 +7,6 @@ on:
         description: "Release version tag (e.g., v1.0.3)"
         required: true
         type: string
-      pinact_version:
-        description: "Pinact version to install (e.g., v3.9.0)"
-        required: false
-        default: "v3.9.0"
-        type: string
 
 permissions: {}
 
@@ -21,9 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      sha: ${{ steps.get_sha.outputs.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Get commit SHA
+        id: get_sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         env:
@@ -36,22 +37,11 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Go
-        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
-        with:
-          go-version: stable
-          cache: false
-
-      - name: Install pinact
-        env:
-          PINACT_VERSION: ${{ inputs.pinact_version }}
-        run: go install "github.com/suzuki-shunsuke/pinact/v3/cmd/pinact@${PINACT_VERSION}"
-
       - name: Find and update repositories
         env:
           GH_TOKEN: ${{ secrets.OPENVIDU_GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.OPENVIDU_GITHUB_TOKEN }}
           VERSION: ${{ inputs.version }}
+          TAG_SHA: ${{ needs.release.outputs.sha }}
         run: |
           set -euo pipefail
 
@@ -60,28 +50,38 @@ jobs:
             exit 1
           fi
 
-          echo "Searching for repositories using OpenVidu/actions..."
-          search_output=$(
+          tag_sha="$TAG_SHA"
+          echo "Release ${VERSION} pinned to SHA ${tag_sha}"
+
+          # Search returns the exact repo:file pairs that reference OpenVidu/actions
+          echo "Searching for files using OpenVidu/actions..."
+          mapfile -t items < <(
             gh api search/code \
               -X GET \
               --paginate \
               -f per_page=100 \
               -f q='uses: OpenVidu/actions/ org:OpenVidu language:yaml' \
-              --jq '.items[].repository.full_name' \
+              --jq '.items[] | .repository.full_name + ":" + .path' \
             | sort -u
           )
 
-          if [[ -z "$search_output" ]]; then
-            echo "No repositories found using OpenVidu/actions"
+          if [[ ${#items[@]} -eq 0 ]]; then
+            echo "No files found using OpenVidu/actions"
             exit 0
           fi
 
-          mapfile -t repos <<< "$search_output"
+          # Group file paths by repository
+          declare -A repo_files
+          for item in "${items[@]}"; do
+            repo="${item%%:*}"
+            path="${item#*:}"
+            repo_files["$repo"]+="${path}"$'\n'
+          done
 
-          echo "Found ${#repos[@]} repositories:"
-          printf '  %s\n' "${repos[@]}"
+          echo "Found ${#repo_files[@]} repositories across ${#items[@]} files:"
+          printf '  %s\n' "${items[@]}"
 
-          for repo in "${repos[@]}"; do
+          for repo in "${!repo_files[@]}"; do
             echo ""
             echo "========================================="
             echo "Processing $repo..."
@@ -96,9 +96,12 @@ jobs:
 
             pushd "$work_dir" > /dev/null
 
-            # Update only OpenVidu/actions references to latest version
-            echo "Running pinact on $repo..."
-            pinact run -u -diff -i "OpenVidu/actions/.*" || echo "::warning::pinact exited with code $? for $repo"
+            echo "Replacing OpenVidu/actions references with SHA ${tag_sha} (${VERSION})..."
+
+            # sed only the files the search already identified — no find needed
+            readarray -t files < <(printf '%s' "${repo_files[$repo]}" | grep -v '^$')
+            printf '%s\0' "${files[@]}" \
+              | xargs -0 sed -i -E "s|(OpenVidu/actions/[^@]+)@[a-zA-Z0-9._-]+([ \t]+# [^ ]+)?|\1@${tag_sha} # ${VERSION}|g"
 
             if git diff --quiet; then
               echo "No changes needed for $repo"
