@@ -70,17 +70,13 @@ runs:
         ref-openvidu-pro-mediasoup: ${{ inputs.ref-openvidu-pro-mediasoup }}
         github-token: ${{ inputs.github-token }}
 
-      # This step saves every JSON key-value pair from the input `tags-openvidu-local-deployment` as environment variables.
-      # {"my-key": "my-value"} -> TAG_MY_KEY=my-value
-    - name: Set OpenVidu Local Deployment tags as env vars from JSON
-      shell: bash
-      if: ${{ inputs.tags-openvidu-local-deployment != '' }}
-      run: |
-        echo '${{ inputs.tags-openvidu-local-deployment }}' | jq -r 'to_entries[] | "TAG_\(.key | ascii_upcase | gsub("-"; "_"))=\(.value)"' >> "$GITHUB_ENV"
-
+      # This step dynamically iterates over the JSON keys from `tags-openvidu-local-deployment`
+      # and updates the corresponding service image tags in the docker-compose.yaml.
+      # Any key that doesn't match an existing service is silently ignored.
     - name: Tag OpenVidu Local Deployment
       shell: bash
       working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      if: ${{ inputs.tags-openvidu-local-deployment != '' }}
       run: |
         # Function to update image tag for a service in the docker-compose.yaml
         # For it to take effect, the service must exist and the tag must be non-empty
@@ -93,20 +89,15 @@ runs:
               local current_image=$(yq e ".services.$service_name.image" docker-compose.yaml)
               local base_image=${current_image%:*}
               yq e -i ".services.$service_name.image = \"$base_image:$new_tag\"" docker-compose.yaml
+              echo "Updated service '$service_name' to tag '$new_tag'"
+            else
+              echo "Service '$service_name' not found in docker-compose.yaml, skipping"
             fi
           fi
         }
-        update_service_tag "caddy-proxy" "$TAG_CADDY_PROXY"
-        update_service_tag "redis" "$TAG_REDIS"
-        update_service_tag "minio" "$TAG_MINIO"
-        update_service_tag "mongo" "$TAG_MONGO"
-        update_service_tag "dashboard" "$TAG_DASHBOARD"
-        update_service_tag "openvidu" "$TAG_OPENVIDU"
-        update_service_tag "ingress" "$TAG_INGRESS"
-        update_service_tag "egress" "$TAG_EGRESS"
-        update_service_tag "default-app" "$TAG_DEFAULT_APP"
-        update_service_tag "openvidu-v2compatibility" "$TAG_OPENVIDU_V2COMPATIBILITY"
-        update_service_tag "operator" "$TAG_OPERATOR"
+        echo '${{ inputs.tags-openvidu-local-deployment }}' | jq -r 'to_entries[] | "\(.key) \(.value)"' | while read -r service tag; do
+          update_service_tag "$service" "$tag"
+        done
 
     - name: Run pre-startup commands
       shell: bash
