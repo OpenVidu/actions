@@ -97,7 +97,8 @@ jobs:
             pushd "$work_dir" > /dev/null
 
             # Update only OpenVidu/actions references to latest version
-            pinact run -u -i "OpenVidu/actions/.*" || true
+            echo "Running pinact on $repo..."
+            pinact run -u -diff -i "OpenVidu/actions/.*" || echo "::warning::pinact exited with code $? for $repo"
 
             if git diff --quiet; then
               echo "No changes needed for $repo"
