@@ -30,7 +30,7 @@ runs:
     - name: Build OpenVidu Components Angular
       if: ${{ inputs.build_components_angular == 'true' && inputs.components_artifact_name == '' }}
       id: build_components
-      uses: OpenVidu/actions/build-openvidu-components-angular@0f5592e91f0dca4c62e7a3cf412a6c17cf432b6d # v1.0.4
+      uses: ./build-openvidu-components-angular
       with:
         checkout_ref: ${{ inputs.components_checkout_ref }}
         artifact_name: 'openvidu-components-angular-temp'
