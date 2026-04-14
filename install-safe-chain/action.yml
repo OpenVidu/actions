@@ -1,0 +1,8 @@
+name: 'Install safe-chain'
+description: 'Installs AikidoSec safe-chain in CI mode'
+runs:
+  using: 'composite'
+  steps:
+    - name: Install safe-chain
+      shell: bash
+      run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
