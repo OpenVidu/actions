@@ -8,6 +8,8 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Install safe-chain
+      uses: ./install-safe-chain
     - name: Install dependencies
       shell: bash
       run: |
