@@ -39,3 +39,7 @@ steps:
 
 - GitHub runner with bash shell
 - `curl` available on the runner
+
+## Docs
+
+Try to keep this document updated every time `safe-chain` is used across repositories: https://github.com/OpenVidu/openvidu-github-actions/blob/master/docs/safe-chain-usage.md
