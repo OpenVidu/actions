@@ -9,7 +9,7 @@ runs:
   using: 'composite'
   steps:
     - name: Install safe-chain
-      uses: OpenVidu/actions/install-safe-chain@v1.0.9
+      uses: OpenVidu/actions/install-safe-chain@1e4846d921912e6d26738a5583174081d374bd54 # v1.0.11
     - name: Install dependencies
       shell: bash
       run: |

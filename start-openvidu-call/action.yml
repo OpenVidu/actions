@@ -13,7 +13,7 @@ runs:
   using: 'composite'
   steps:
     - name: Install safe-chain
-      uses: OpenVidu/actions/install-safe-chain@0b1ad5bceb9cfb061942f9edd8c78f6ed67352dd # v1.0.9
+      uses: OpenVidu/actions/install-safe-chain@1e4846d921912e6d26738a5583174081d374bd54 # v1.0.11
     - name: Checkout OpenVidu Call
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
