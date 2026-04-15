@@ -24,7 +24,7 @@ runs:
   using: 'composite'
   steps:
     - name: Install safe-chain
-      uses: OpenVidu/actions/install-safe-chain@eb75e3c01b9767d78550dfc99f3fa2b3cb5d4216 # v1.0.12
+      uses: OpenVidu/actions/install-safe-chain@463dfe08b1b31721b73459a02417eae59198fc93 # v1.0.13
     - name: Setup Node.js
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
