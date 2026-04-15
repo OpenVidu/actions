@@ -1,8 +1,16 @@
 name: 'Install safe-chain'
 description: 'Installs AikidoSec safe-chain in CI mode'
+inputs:
+  minimum-package-age-hours:
+    description: 'Minimum package age in hours for safe-chain. Defaults to 0, which only checks for currently ongoing malware packages and avoids CI release issues when consuming freshly published packages.'
+    required: false
+    default: '0'
 runs:
   using: 'composite'
   steps:
+    - name: Set minimum package age
+      shell: bash
+      run: echo "SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS=${{ inputs.minimum-package-age-hours }}" >> $GITHUB_ENV
     - name: Install safe-chain
       shell: bash
       run: curl -fsSL https://github.com/AikidoSec/safe-chain/releases/latest/download/install-safe-chain.sh | sh -s -- --ci
