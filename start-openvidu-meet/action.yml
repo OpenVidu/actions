@@ -17,9 +17,9 @@ runs:
       with:
         ref: ${{ github.ref }}
 
-    - name: Build OpenVidu Meet
+    - name: Install and Build OpenVidu Meet
       shell: bash
-      run: ./meet.sh build --skip-install
+      run: ./meet.sh build
 
     - name: Start OpenVidu Meet
       if: ${{ inputs.skip_backend_start != 'true' }}
