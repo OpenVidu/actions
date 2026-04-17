@@ -26,6 +26,8 @@ This action automates the process of starting an AWS EC2 runner by:
 | `security-group-id` | AWS Security Group ID | Yes | - |
 | `workflow-name` | Workflow name for tagging | No | `${{ github.workflow }}` |
 | `repository-name` | Repository name for tagging | No | `${{ github.repository }}` |
+| `run-runner-as-user` | User under whom the runner service should run. If not set, it will not be passed to the underlying action. | No | - |
+| `market-type` | Market (purchasing) option for the instance, e.g. `spot`. If not set, it will not be passed to the underlying action. | No | - |
 
 ## Outputs
 
