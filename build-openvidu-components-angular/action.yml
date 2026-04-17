@@ -28,7 +28,7 @@ runs:
       with:
         node-version: '24'
     - name: Install safe-chain
-      uses: OpenVidu/actions/install-safe-chain@a5d6165c017b522939a9bf180e2f73c76c44f000 # v1.0.17
+      uses: OpenVidu/actions/install-safe-chain@e585b0ac266d7afffc6cba105b380ad6a477a4c0 # v1.0.18
     - name: Checkout OpenVidu Components Angular
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
