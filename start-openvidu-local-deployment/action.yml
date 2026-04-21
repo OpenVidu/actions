@@ -131,6 +131,9 @@ runs:
             yq e -i '.services.openvidu.environment += ["MEDIASOUP_WORKER_BIN='${MEDIASOUP_WORKER_BIN:-}'"]' docker-compose.yaml
           fi
         fi
+        # Enables support for Data Tracks
+        # TODO: remove this when Data Tracks are enabled by default
+        yq e -i '.enable_data_tracks = true' livekit.yaml
         docker compose down -v
         docker compose pull --ignore-pull-failures
 
