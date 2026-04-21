@@ -3,7 +3,7 @@ Automate your OpenVidu workflows in GitHub Actions
 
 # How to update pinned actions from OpenVidu/actions repository
 
-Run the workflow [Release and Update Pinned Actions](https://github.com/OpenVidu/actions/actions/workflows/update-pinned-actions.yml).
+Run the workflow [Release and Update Pinned Actions]([https://github.com/OpenVidu/actions/actions/workflows/update-pinned-actions.yml](https://github.com/OpenVidu/openvidu-deployment/actions/workflows/update-pinned-actions.yml)).
 
 It will:
 1. Create a new release of OpenVidu/actions repository with a new user-defined tag.
