@@ -20,14 +20,14 @@ This action automates the process of setting up and optionally running the OpenV
 
 ## Usage
 
-### Start OpenVidu Meet with Backend (Default behavior)
+### Start OpenVidu Meet (Default behavior)
 
 ```yaml
 steps:
   - name: Checkout
     uses: actions/checkout@v6
 
-  - name: Start OpenVidu Meet Backend
+  - name: Start OpenVidu Meet
     uses: OpenVidu/actions/start-openvidu-meet@<sha-256> # v<version>
     with:
       timeout: '120000' # Optional: extend timeout to 2 minutes
@@ -38,14 +38,14 @@ steps:
       # OpenVidu Meet will be available at http://localhost:6080/meet
 ```
 
-### Prepare OpenVidu Meet without Starting Backend
+### Prepare OpenVidu Meet without Starting
 
 ```yaml
 steps:
   - name: Checkout
     uses: actions/checkout@v6
 
-  - name: Prepare OpenVidu Meet (without starting backend)
+  - name: Prepare OpenVidu Meet (without starting)
     uses: OpenVidu/actions/start-openvidu-meet@<sha-256> # v<version>
     with:
       skip_backend_start: 'true'
@@ -56,22 +56,6 @@ steps:
       # You can now run custom commands or start the backend manually
       cd backend
       npm run start:dev  # or any other custom command
-```
-
-### Start OpenVidu Meet
-
-```yaml
-steps:
-  - name: Checkout
-    uses: actions/checkout@v6
-
-  - name: Start OpenVidu Meet
-    uses: OpenVidu/actions/start-openvidu-meet@<sha-256> # v<version>
-
-  - name: Run tests against OpenVidu Meet
-    run: |
-      # Your test commands here
-      # OpenVidu Meet will be available at http://localhost:6080/meet
 ```
 
 ## Requirements
@@ -88,7 +72,7 @@ steps:
 
 - When `skip_backend_start` is `true`:
 
-  - Only the build step (`./meet.sh build --skip-install`) is executed
+  - Only the build step (`./meet.sh build`) is executed
   - The backend is not started automatically
   - The waiting step is skipped entirely
   - This is useful when you want to build and prepare the environment but start the backend manually or with different parameters
