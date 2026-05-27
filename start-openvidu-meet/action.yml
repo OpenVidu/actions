@@ -24,7 +24,7 @@ runs:
     - name: Start OpenVidu Meet
       if: ${{ inputs.skip_backend_start != 'true' }}
       shell: bash
-      run: ./meet.sh start --ci --skip-install > meet_backend.log 2>&1 &
+      run: ./meet.sh start --ci --skip-install --skip-build > meet_backend.log 2>&1 &
 
     - name: Wait for OpenVidu Meet to Start
       if: ${{ inputs.skip_backend_start != 'true' }}
