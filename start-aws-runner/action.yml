@@ -40,6 +40,9 @@ inputs:
   market-type:
     description: "Market (purchasing) option for the instance, e.g. 'spot'. If not set, it will not be passed to the underlying action."
     required: false
+  aws-volume-size:
+    description: "Root EBS volume size in GB. If not set, the AMI's default volume size is used."
+    required: false
 
 outputs:
   label:
@@ -77,3 +80,4 @@ runs:
           ]
         run-runner-as-user: ${{ inputs.run-runner-as-user }}
         market-type: ${{ inputs.market-type }}
+        ec2-volume-size: ${{ inputs.aws-volume-size }}
