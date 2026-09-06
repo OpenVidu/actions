@@ -1,0 +1,187 @@
+name: Renovate AI Fix (reusable)
+
+# Invoked by each managed repository through a 15-line wrapper (templates/ai-fix.yml)
+# when its CI goes red on a renovate/* branch. Everything that evolves — the prompt,
+# the log collection, the retry counter — lives here, so consumer repos never change.
+
+on:
+  workflow_call:
+    inputs:
+      max-attempts:
+        description: Maximum agent attempts per PR
+        type: number
+        default: 2
+      bot-login:
+        description: Login of the fixer bot, used to count its commits
+        type: string
+        default: 'openvidu-ai-fixer[bot]'
+      extra-instructions:
+        description: Repo-specific additions to the prompt
+        type: string
+        default: ''
+    secrets:
+      ANTHROPIC_API_KEY: { required: true }
+      BOT_APP_ID:        { required: true }
+      BOT_PRIVATE_KEY:   { required: true }
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    # The branch identifies the PR reliably under both triggers
+    concurrency:
+      group: ai-fix-${{ github.event.workflow_run.head_branch || github.event.inputs.pr }}
+      cancel-in-progress: true
+
+    env:
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+      # ── GitHub App token: without this the loop never closes ──
+      # A push made with the default GITHUB_TOKEN does not trigger workflows,
+      # so CI would never re-run and the PR would stay red forever.
+      - uses: actions/create-github-app-token@<SHA_APP_TOKEN>   # v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      # ── Resolve the PR: workflow_run does not provide it ──
+      - name: Resolve PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          MANUAL_PR: ${{ github.event.inputs.pr }}
+        run: |
+          if [ -n "$MANUAL_PR" ]; then
+            NUM="$MANUAL_PR"
+          else
+            NUM=$(gh pr list --head "$BRANCH" --state open \
+                    --json number -q '.[0].number')
+          fi
+          if [ -z "$NUM" ] || [ "$NUM" = "null" ]; then
+            echo "::notice::No open PR for '$BRANCH'. Nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          {
+            echo "number=$NUM"
+            echo "head=$(gh pr view "$NUM" --json headRefName -q .headRefName)"
+            echo "base=$(gh pr view "$NUM" --json baseRefName -q .baseRefName)"
+          } >> "$GITHUB_OUTPUT"
+
+      # ── Attempt counter: state lives in the PR itself ──
+      - name: Compute attempt
+        id: attempt
+        if: steps.pr.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ steps.pr.outputs.number }}
+          BOT_LOGIN: ${{ inputs.bot-login }}
+          MAX: ${{ inputs.max-attempts }}
+        run: |
+          N=$(gh pr view "$PR" --json commits \
+                --jq '[.commits[] | select(.authors[].login == $ENV.BOT_LOGIN)] | length')
+          echo "n=$((N + 1))" >> "$GITHUB_OUTPUT"
+          echo "Attempt $((N + 1)) of $MAX"
+
+      - name: Give up when attempts are exhausted
+        if: >
+          steps.pr.outputs.skip != 'true' &&
+          fromJSON(steps.attempt.outputs.n) > inputs.max-attempts
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ steps.pr.outputs.number }}
+          MAX: ${{ inputs.max-attempts }}
+        run: |
+          gh label create needs-human --color d93f0b --force || true
+          gh pr edit "$PR" --add-label needs-human
+          gh pr ready "$PR" --undo            # to draft: blocks automerge
+          gh pr comment "$PR" --body \
+            "🤖 Exhausted $MAX automatic attempts. Needs human review."
+          exit 1
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        if: steps.pr.outputs.skip != 'true'
+        with:
+          ref: ${{ steps.pr.outputs.head }}
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+
+      # ── Logs: the run is finished, so --log-failed works in one call ──
+      - name: Collect failure logs
+        if: steps.pr.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD: ${{ steps.pr.outputs.head }}
+        run: |
+          mkdir -p /tmp/ci
+          if [ -z "$RUN_ID" ]; then
+            # Manual dispatch: find the latest failed run on the branch
+            RUN_ID=$(gh run list --branch "$HEAD" --status failure --limit 1 \
+                       --json databaseId -q '.[0].databaseId')
+          fi
+          gh run view "$RUN_ID" --json name,displayTitle,jobs \
+            --jq '{workflow:.name, jobs:[.jobs[]|{name,conclusion}]}' \
+            > /tmp/ci/run.json
+          gh run view "$RUN_ID" --log-failed > /tmp/ci/failed.log
+          wc -l /tmp/ci/failed.log
+
+      # ── The agent ──
+      - uses: anthropics/claude-code-action@<SHA_CLAUDE>        # v1
+        if: steps.pr.outputs.skip != 'true'
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.app-token.outputs.token }}
+          prompt: |
+            A Renovate dependency-update PR has turned CI red.
+            PR #${{ steps.pr.outputs.number }} · branch ${{ steps.pr.outputs.head }}
+            Attempt ${{ steps.attempt.outputs.n }} of ${{ inputs.max-attempts }}.
+
+            ## Discover how CI runs (the commands are withheld on purpose)
+            1. Read /tmp/ci/run.json: which workflow and which jobs failed.
+            2. Read /tmp/ci/failed.log (it is large: grep it, do not read it whole).
+            3. Read .github/workflows/ to understand how that job installs and
+               runs: setup-* steps, working-directory, env, matrix, services.
+            4. Reproduce those steps locally and confirm you see the same failure.
+
+            ## Context for the update
+            `git diff origin/${{ steps.pr.outputs.base }}...HEAD`
+
+            ## If this is not the first attempt
+            Your previous attempts are in the history and did NOT work:
+            `git log --author="${{ inputs.bot-login }}" origin/${{ steps.pr.outputs.base }}..HEAD -p`
+            - If the error CHANGED since the last attempt: you made progress, continue.
+            - If the error is IDENTICAL: your hypothesis was wrong. Discard that
+              approach entirely, do not refine it.
+
+            ## Your task
+            Adapt the APPLICATION CODE to the breaking change.
+
+            Hard rules:
+            - Do NOT modify or delete tests.
+            - Do NOT touch manifests or lockfiles: the new version is intentional.
+            - Do NOT add new dependencies.
+            - Do NOT silence errors (@ts-ignore, noqa, empty catch) unless there
+              is no alternative, and then leave a comment explaining why.
+            - Read the dependency's changelog before deciding.
+            - Verify using the commands you discovered before committing.
+            - If the repo has a CLAUDE.md, follow its conventions.
+
+            If you CANNOT reproduce the environment locally (service containers,
+            browsers, credentials), say so explicitly, still apply the fix you
+            deduce from the log and the changelog, and mark it UNVERIFIED.
+            CI will validate it.
+
+            ## MANDATORY
+            Always leave a comment on PR #${{ steps.pr.outputs.number }}, whether
+            you fixed anything or not: what broke, why, what you changed, and
+            whether you verified it locally. This workflow does not appear as a
+            check on the PR, so that comment is the only channel to the reviewer.
+
+            ${{ inputs.extra-instructions }}
+          claude_args: >
+            --max-turns 40
+            --allowedTools "Bash,Edit,Read,Glob,Grep,WebFetch"

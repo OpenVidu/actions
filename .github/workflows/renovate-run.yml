@@ -1,0 +1,42 @@
+name: Renovate (reusable)
+
+# Invoked by each managed repository through a 6-line wrapper. Everything that
+# defines HOW Renovate runs lives here, so it never has to be redeployed:
+# most importantly RENOVATE_ALLOWED_COMMANDS, which is a global Renovate option
+# and cannot be set from renovate.json or from a shared preset.
+
+on:
+  workflow_call:
+    inputs:
+      log-level:
+        description: Renovate log level (debug is useful when a manager is not detected)
+        type: string
+        default: info
+    secrets:
+      RENOVATE_TOKEN: { required: true }
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: renovatebot/github-action@<SHA_RENOVATE>   # v43
+        env:
+          # Inside a reusable workflow these resolve to the CALLING repository,
+          # so no inputs are needed to point Renovate at the right place.
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_PLATFORM: github
+          LOG_LEVEL: ${{ inputs.log-level }}
+
+          # Allowlist for the migration catalog in renovate/default.json.
+          # This is an ALLOWLIST, not an execution list: it declares what would
+          # be permitted if a packageRule asked for it. One entry per command in
+          # the catalog, anchored as tightly as the command allows.
+          # Keep it in step with the postUpgradeTasks in renovate/default.json:
+          # a command missing from here is skipped SILENTLY.
+          RENOVATE_ALLOWED_COMMANDS: '["^npm ci --ignore-scripts$","^npx ng update "]'
+          RENOVATE_ALLOW_POST_UPGRADE_COMMAND_TEMPLATING: 'true'
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}

@@ -1,0 +1,61 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "OpenVidu organization-wide Renovate policy",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Europe/Madrid",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+  "vulnerabilityAlerts": { "groupName": null, "labels": ["security"] },
+  "customManagers": [
+    {
+      "description": "Tool versions annotated with # renovate: comments",
+      "customType": "regex",
+      "managerFilePatterns": ["/^.*Dockerfile$/"],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\sENV .*?_VERSION=(?<currentValue>.*)\\s"
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "The shared reusable workflows use a moving tag, do not pin them",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["OpenVidu/actions"],
+      "enabled": false
+    },
+    {
+      "description": "Group action bumps into a single PR",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    },
+    {
+      "description": "Group dev minor/patch into a single PR",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "dev dependencies"
+    },
+    {
+      "description": "Majors go alone - they are the ones that break",
+      "matchUpdateTypes": ["major"],
+      "groupName": null
+    },
+    {
+      "description": "Angular: run the official migrations on major upgrades",
+      "matchPackageNames": ["@angular/core"],
+      "matchUpdateTypes": ["major"],
+      "postUpgradeTasks": {
+        "commands": [
+          "npm ci --ignore-scripts",
+          "npx ng update {{{depName}}} --from={{{currentVersion}}} --to={{{newVersion}}} --migrate-only --allow-dirty --force"
+        ],
+        "fileFilters": ["**/**"],
+        "executionMode": "update"
+      }
+    }
+  ]
+}
