@@ -1,0 +1,428 @@
+name: Run an unattended report update
+description: >
+  Runs a Claude Code runbook unattended, streams its transcript to the log, commits (or opens a PR
+  with) whatever it produced, and reports the outcome to Slack. The generic half of every report
+  update; the task-specific half is its own prompt.md.
+
+inputs:
+  report-name:
+    description: 'Report update identifier, e.g. comparative-study. Used in the branch name, the commit subject fallback and the reports.'
+    required: true
+  prompt-file:
+    description: 'Path to the runbook (prompt.md), relative to the repository root.'
+    required: true
+  claude-code-oauth-token:
+    description: 'CLAUDE_CODE_OAUTH_TOKEN. Create one with `claude setup-token` and store it as a repository secret.'
+    required: true
+  slack-webhook-url:
+    description: 'Slack incoming webhook. When empty, the Slack notification is skipped.'
+    required: false
+    default: ''
+  force:
+    description: 'Run even if the task already ran today (contract §C4).'
+    required: false
+    default: 'false'
+  create-pr:
+    description: 'Open a pull request instead of pushing straight to the base branch.'
+    required: false
+    default: 'false'
+  base-branch:
+    description: 'Branch the changes are pushed to, or the PR is opened against.'
+    required: false
+    default: ${{ github.ref_name }}
+  allowed-tools:
+    description: 'Tools Claude Code may use without asking.'
+    required: false
+    default: 'Bash,Read,Write,Edit,Glob,Grep,WebFetch,WebSearch'
+  permission-mode:
+    description: 'Claude Code permission mode.'
+    required: false
+    default: 'acceptEdits'
+  model:
+    description: 'Model for the run: an alias like "opus", "sonnet", "fable", or a full model name like "claude-opus-5". Empty leaves Claude Code''s own default.'
+    required: false
+    default: ''
+  effort:
+    description: 'Reasoning effort for the run: low, medium, high, xhigh or max. Heavier reports (e.g. deep comparative studies) may want a higher effort than routine ones. Empty leaves Claude Code''s own default.'
+    required: false
+    default: ''
+  contract-file:
+    description: 'Execution contract prepended to the runbook. Defaults to the one shipped with this action.'
+    required: false
+    default: ''
+
+outputs:
+  status:
+    description: 'The status the run reported in /tmp/outcome.json: success, skipped, failure or unknown.'
+    value: ${{ steps.commit.outputs.status }}
+  committed:
+    description: 'Whether the workflow committed anything (true/false).'
+    value: ${{ steps.commit.outputs.committed }}
+  commit-sha:
+    description: 'SHA of the commit, when one was made.'
+    value: ${{ steps.commit.outputs.sha }}
+  pull-request-url:
+    description: 'URL of the pull request, when one was opened.'
+    value: ${{ steps.pr.outputs.url }}
+
+runs:
+  using: composite
+  steps:
+    # Resolved once, here, so that the prompt, the git steps and the Slack report all agree.
+    - name: Resolve run parameters
+      id: params
+      shell: bash
+      run: |
+        today=$(date -u +%F)
+        if [ '${{ inputs.create-pr }}' = 'true' ]; then
+          delivery="pull-request"
+          branch="report-update/${{ inputs.report-name }}/${today}-${{ github.run_id }}"
+        else
+          delivery="push-to-main"
+          branch='${{ inputs.base-branch }}'
+        fi
+        contract='${{ inputs.contract-file }}'
+        [ -n "$contract" ] || contract='${{ github.action_path }}/AGENT_CONTRACT.md'
+        run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        {
+          echo "today=$today"
+          echo "delivery=$delivery"
+          echo "branch=$branch"
+          echo "contract=$contract"
+          echo "run_url=$run_url"
+        } >> "$GITHUB_OUTPUT"
+        echo "report_name=${{ inputs.report-name }} · today=$today · force=${{ inputs.force }} · delivery=$delivery · branch=$branch"
+
+        for f in '${{ inputs.prompt-file }}' "$contract"; do
+          if [ ! -s "$f" ]; then
+            echo "::error::missing or empty file: $f"
+            exit 1
+          fi
+        done
+
+    - name: Create the task branch
+      if: steps.params.outputs.delivery == 'pull-request'
+      shell: bash
+      run: git switch -c '${{ steps.params.outputs.branch }}'
+
+    - name: Configure git identity
+      shell: bash
+      run: |
+        git config user.name "claude-ai-tasks[bot]"
+        git config user.email "ai-tasks@users.noreply.github.com"
+
+    - name: Install Claude Code
+      shell: bash
+      run: npm install -g @anthropic-ai/claude-code   # check this is still the current command in the official docs
+
+    - name: Capture Claude usage (before the task)
+      shell: bash
+      env:
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
+      run: |
+        # Snapshot of the subscription's rate-limit windows, purely for the observability
+        # table added to the job summary after the task runs. Best-effort: never fails the job.
+        # Endpoint is the same one Claude Code's own /usage screen calls — undocumented, may change.
+        curl -sf --max-time 10 https://api.anthropic.com/api/oauth/usage \
+          -H "Authorization: Bearer $CLAUDE_CODE_OAUTH_TOKEN" \
+          -H "anthropic-beta: oauth-2025-04-20" \
+          -A "claude-code/2.1.203" \
+          -o /tmp/report-update-usage-before.json \
+          && jq -e . /tmp/report-update-usage-before.json > /dev/null 2>&1 \
+          || echo '{}' > /tmp/report-update-usage-before.json
+
+    - name: Run the task
+      id: run
+      shell: bash
+      env:
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set +e   # we handle the exit code ourselves, after printing the transcript
+
+        # Turns the stream-json events into a readable transcript: Claude's own text, one line per
+        # tool call, and any tool error. This is what makes the run auditable in the console.
+        # `fromjson? // empty` so that a stray non-JSON line on stdout cannot break it.
+        cat > /tmp/report-update-transcript.jq <<'JQ'
+        fromjson? // empty
+        | if .type == "system" and .subtype == "init" then
+            "── session \(.session_id // "?") · model \(.model // "?")"
+          elif .type == "assistant" then
+            (.message.content[]?
+              | if .type == "text" then (if ((.text // "") | length) > 0 then .text else empty end)
+                elif .type == "tool_use" then "  → \(.name): \((.input // {}) | tostring | .[0:200])"
+                else empty end)
+          elif .type == "user" then
+            (.message.content[]?
+              | select(.type == "tool_result" and .is_error == true)
+              | "  ✗ tool error: \((.content // "") | tostring | .[0:300])")
+          elif .type == "result" then
+            "── result: \(.subtype) · \(.num_turns) turns · \(((.duration_ms // 0) / 1000) | floor)s · $\(.total_cost_usd // 0)"
+          else empty end
+        JQ
+
+        # The contract (generic) plus the runbook (task-specific) plus the parameters resolved above.
+        # Contract §C1 tells the agent that the parameters block is authoritative.
+        prompt="$(cat '${{ steps.params.outputs.contract }}')
+
+        ---
+
+        $(cat '${{ inputs.prompt-file }}')
+
+        ---
+
+        ## Run parameters
+
+        - report_name: ${{ inputs.report-name }}
+        - today: ${{ steps.params.outputs.today }}
+        - force: ${{ inputs.force }}
+        - delivery: ${{ steps.params.outputs.delivery }}
+        - url_ref: ${{ steps.params.outputs.branch }}
+        - run_url: ${{ steps.params.outputs.run_url }}"
+
+        # Only passed when set, so an empty input leaves Claude Code's own default in place.
+        model_args=()
+        [ -n '${{ inputs.model }}' ] && model_args+=(--model '${{ inputs.model }}')
+        [ -n '${{ inputs.effort }}' ] && model_args+=(--effort '${{ inputs.effort }}')
+
+        echo "::group::Claude transcript"
+        claude -p "$prompt" \
+          --permission-mode '${{ inputs.permission-mode }}' \
+          --allowedTools '${{ inputs.allowed-tools }}' \
+          "${model_args[@]}" \
+          --output-format stream-json --verbose \
+          | tee /tmp/report-update-stream.jsonl \
+          | jq -R --unbuffered -r -f /tmp/report-update-transcript.jq
+        code=${PIPESTATUS[0]}   # must be read immediately: claude's code, not jq's
+        echo "::endgroup::"
+
+        # The last `result` event carries Claude's closing answer and the run's metadata.
+        jq -R -c 'fromjson? | select(.type == "result")' /tmp/report-update-stream.jsonl | tail -1 > /tmp/report-update-result.json
+
+        echo "## ${{ inputs.report-name }} — Claude's closing answer" >> "$GITHUB_STEP_SUMMARY"
+        if [ -s /tmp/report-update-result.json ]; then
+          jq -r '.result // "(the result event carried no text)"' /tmp/report-update-result.json | tee -a "$GITHUB_STEP_SUMMARY"
+          jq -r '"\n_\(.num_turns) turns · \(((.duration_ms // 0) / 1000) | floor)s · $\(.total_cost_usd // 0) · permission denials: \((.permission_denials // []) | length)_"' \
+            /tmp/report-update-result.json >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "Claude produced no result event — it died before finishing. Exit code: $code." \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+        fi
+
+        if [ $code -ne 0 ]; then
+          echo "::error::claude exited with code $code (see the transcript and the answer above)"
+        fi
+        exit $code
+
+    - name: Report Claude usage windows (observability)
+      if: always()   # capture the "after" snapshot even if the task step above failed
+      shell: bash
+      env:
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
+      run: |
+        curl -sf --max-time 10 https://api.anthropic.com/api/oauth/usage \
+          -H "Authorization: Bearer $CLAUDE_CODE_OAUTH_TOKEN" \
+          -H "anthropic-beta: oauth-2025-04-20" \
+          -A "claude-code/2.1.203" \
+          -o /tmp/report-update-usage-after.json \
+          && jq -e . /tmp/report-update-usage-after.json > /dev/null 2>&1 \
+          || echo '{}' > /tmp/report-update-usage-after.json
+        [ -s /tmp/report-update-usage-before.json ] || echo '{}' > /tmp/report-update-usage-before.json
+
+        # Matches each window (kind + model scope, e.g. session / weekly_all / a weekly_scoped
+        # model) between the before/after snapshots. The delta is NOT this job's own cost: it's
+        # whatever the whole subscription burned between the two curls, so any other task run
+        # concurrently against the same subscription (another workflow, interactive use) shows
+        # up in it too — that's inherent to how the rate-limit API reports usage.
+        cat > /tmp/report-update-usage.jq <<'JQ'
+        def key(l): [l.kind, (l.scope.model.display_name // "")] | join(":");
+        def title(l):
+          if l.kind == "session" then "Current session (5h)"
+          elif l.kind == "weekly_all" then "All models (weekly)"
+          elif l.kind == "weekly_scoped" then (l.scope.model.display_name // "Model") + " (weekly)"
+          else (l.kind // "unknown") end;
+        def rank(l):
+          if l.kind == "session" then 0
+          elif l.kind == "weekly_all" then 1
+          elif l.kind == "weekly_scoped" then 2
+          else 3 end;
+        def pct(n): if n == null then "–" else (n | round | tostring) + "%" end;
+
+        ($before.limits // []) as $bl
+        | ($after.limits // []) as $al
+        | ($bl | map({(key(.)): .}) | add // {}) as $bmap
+        | ($al | map({(key(.)): .}) | add // {}) as $amap
+        | (($bmap | keys) + ($amap | keys) | unique) as $allkeys
+        | [ $allkeys[] as $k
+            | $bmap[$k] as $b | $amap[$k] as $a
+            | (if $a then $a else $b end) as $ref
+            | ($b.percent) as $bp | ($a.percent) as $ap
+            | {
+                title: title($ref),
+                rank: rank($ref),
+                before: pct($bp),
+                after: pct($ap),
+                delta: (if $bp == null or $ap == null then "–"
+                        else (($ap - $bp) as $d
+                              | (if $d > 0 then "+" else "" end) + ($d | round | tostring) + "pp") end),
+                remaining: (if $ap == null then "–" else (((100 - $ap) | round | tostring) + "%") end),
+                resets_at: ($a.resets_at // $b.resets_at)
+              }
+          ]
+        | sort_by(.rank)
+        | .[]
+        JQ
+
+        {
+          echo "## Claude subscription usage windows"
+          echo ""
+          echo "_Observability only, not this job's cost. Each row is the subscription's rate-limit window from just before to just after this job. Any other task running concurrently on the same subscription (another workflow run, or interactive use elsewhere) also draws from these same windows, so the delta below includes that too — it is not exclusive to this run._"
+          echo ""
+          echo "| Window | Before | After | Δ | Remaining | Resets in |"
+          echo "|---|---|---|---|---|---|"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        now_epoch=$(date -u +%s)
+        jq -c -f /tmp/report-update-usage.jq \
+          --argjson before "$(cat /tmp/report-update-usage-before.json)" \
+          --argjson after "$(cat /tmp/report-update-usage-after.json)" \
+          -n 2>/dev/null | while IFS= read -r row; do
+            title=$(jq -r '.title' <<<"$row")
+            before_s=$(jq -r '.before' <<<"$row")
+            after_s=$(jq -r '.after' <<<"$row")
+            delta_s=$(jq -r '.delta' <<<"$row")
+            remaining_s=$(jq -r '.remaining' <<<"$row")
+            resets_at=$(jq -r '.resets_at' <<<"$row")
+
+            resets_s="–"
+            if [ "$resets_at" != "null" ] && [ -n "$resets_at" ] && resets_epoch=$(date -d "$resets_at" +%s 2>/dev/null); then
+              secs=$((resets_epoch - now_epoch))
+              if [ "$secs" -le 0 ]; then
+                resets_s="resetting soon"
+              elif [ "$secs" -lt 86400 ]; then
+                resets_s="$((secs / 3600))h $(((secs % 3600) / 60))m"
+              else
+                resets_s="$(date -d "@$resets_epoch" -u +'%Y-%m-%d %H:%M UTC')"
+              fi
+            fi
+
+            echo "| $title | $before_s | $after_s | $delta_s | $remaining_s | $resets_s |" >> "$GITHUB_STEP_SUMMARY"
+          done || true
+
+    # Claude never touches git (contract §C6); everything below does.
+    - name: Commit the changes
+      id: commit
+      if: always()
+      shell: bash
+      run: |
+        commit=$(jq -r '.commit // false' /tmp/outcome.json 2>/dev/null)
+        status=$(jq -r '.status // "unknown"' /tmp/outcome.json 2>/dev/null)
+        echo "status=${status:-unknown}" >> "$GITHUB_OUTPUT"
+        echo "outcome: status=$status commit=$commit"
+
+        if [ "$commit" != "true" ]; then
+          echo "Nothing to commit: the run reported commit=$commit (status=$status)."
+          echo "committed=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        git add -A
+        if git diff --cached --quiet; then
+          echo "::warning::the run asked for a commit but left no changes in the working tree"
+          echo "committed=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        subject=$(jq -r '.commit_subject // ""' /tmp/outcome.json)
+        body=$(jq -r '.commit_body // ""' /tmp/outcome.json)
+        case "$subject" in
+          '[report-update]'*) ;;
+          *) subject="[report-update] ${{ inputs.report-name }} — run of ${{ steps.params.outputs.today }}" ;;
+        esac
+
+        git commit -m "$subject" -m "$body"
+        git push origin HEAD
+
+        {
+          echo "committed=true"
+          echo "sha=$(git rev-parse HEAD)"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Open the pull request
+      id: pr
+      if: always() && steps.commit.outputs.committed == 'true' && steps.params.outputs.delivery == 'pull-request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        url=$(gh pr create \
+          --base '${{ inputs.base-branch }}' \
+          --head '${{ steps.params.outputs.branch }}' \
+          --title "$(jq -r '.commit_subject // "[report-update] ${{ inputs.report-name }}"' /tmp/outcome.json)" \
+          --body "Opened automatically by [this run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) of the \`${{ inputs.report-name }}\` report update.
+
+        $(jq -r '.commit_body // ""' /tmp/outcome.json)")
+        echo "url=$url" >> "$GITHUB_OUTPUT"
+        echo "Pull request: $url"
+
+    - name: Ensure a report exists if the run never wrote one
+      if: always()   # covers a failure early enough that the runbook never ran
+      shell: bash
+      run: |
+        if [ -s /tmp/slack.json ]; then
+          exit 0
+        fi
+        reason="The «Run the task» step finished without generating /tmp/slack.json (the ${{ inputs.report-name }} runbook never ran, or was interrupted before reaching its reporting section)."
+        detail=""
+        if [ -s /tmp/report-update-result.json ]; then
+          detail=$(jq -r '.result // empty' /tmp/report-update-result.json 2>/dev/null)
+        fi
+        run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        jq -n --arg task '${{ inputs.report-name }}' --arg reason "$reason" --arg detail "$detail" --arg url "$run_url" '
+          ($reason + (if $detail == "" then "" else "\n\n*Claude Code detail:* " + $detail end)) as $body
+          | {
+              text: ("🛑 [report-update] " + $task + ": no report was generated"),
+              blocks: [
+                { type: "header", text: { type: "plain_text", text: ("🛑 " + $task + ": failed without a report"), emoji: true } },
+                { type: "section", text: { type: "mrkdwn", text: $body } },
+                { type: "section", text: { type: "mrkdwn", text: ("*Run:* <" + $url + "|view logs on GitHub Actions>") } }
+              ]
+            }' > /tmp/slack.json
+
+    # Claude cannot know these links, nor its own final cost, before it exits — they are appended
+    # to its payload here rather than asked for in the report contract.
+    - name: Add the delivery link and run cost to the report
+      if: always()
+      shell: bash
+      run: |
+        repo_url="${{ github.server_url }}/${{ github.repository }}"
+        run_url="$repo_url/actions/runs/${{ github.run_id }}"
+        line="*Run:* <$run_url|logs>"
+        if [ '${{ steps.pr.outputs.url }}' != '' ]; then
+          line="$line   *Pull request:* <${{ steps.pr.outputs.url }}|open>"
+        elif [ '${{ steps.commit.outputs.committed }}' = 'true' ]; then
+          sha='${{ steps.commit.outputs.sha }}'
+          line="$line   *Commit:* <$repo_url/commit/$sha|${sha:0:8}>"
+        else
+          line="$line   *Repository changes:* none"
+        fi
+        if [ -s /tmp/report-update-result.json ]; then
+          cost=$(jq -r '"$" + (((.total_cost_usd // 0) * 100 | round) / 100 | tostring) + " · " + ((.num_turns // 0) | tostring) + " turns · " + (((.duration_ms // 0) / 1000) | floor | tostring) + "s"' /tmp/report-update-result.json)
+          line="$line   *Cost:* $cost"
+        fi
+        # Skipped if it would breach Slack's 50-block limit, or if the payload has no blocks array.
+        jq --arg line "$line" '
+          if (.blocks | type) == "array" and (.blocks | length) < 50
+          then .blocks += [{ type: "context", elements: [{ type: "mrkdwn", text: $line }] }]
+          else . end' /tmp/slack.json > /tmp/slack.linked.json \
+          && mv /tmp/slack.linked.json /tmp/slack.json
+        jq -r '.text' /tmp/slack.json
+
+    - name: Notify Slack
+      if: always() && inputs.slack-webhook-url != ''
+      uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+      with:
+        webhook: ${{ inputs.slack-webhook-url }}
+        webhook-type: incoming-webhook
+        payload-templated: true
+        payload-file-path: /tmp/slack.json   # written by the runbook (contract §C5) or, if it never got that far, by the step above
