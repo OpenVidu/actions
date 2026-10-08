@@ -25,6 +25,18 @@ inputs:
     description: 'If mediasoup-worker-bin is not provided, branch, tag or commit SHA to checkout in repository OpenVidu/openvidu-pro-mediasoup. Only takes effect if openvidu-edition == \"pro\" && rtc-engine == \"mediasoup\". If "default" mediasoup-worker binary will not be compiled: artifact from latest release of OpenVidu/openvidu-pro-mediasoup will be used'
     required: false
     default: "default"
+  egress-pro:
+    description: 'Run openvidu/egress-pro instead of openvidu/egress, keeping the egress tag (main by default, or the one set in tags-openvidu-local-deployment). Only takes effect if openvidu-edition == "pro". egress-pro carries the Pro-only egress features (AV1 Track Egress, Participant Passthrough Egress) and exits at startup without a valid OpenVidu PRO license, so openvidu-pro-license is required'
+    required: false
+    default: "false"
+  openvidu-pro-license:
+    description: 'OpenVidu PRO license egress-pro checks at startup and periodically. Pass it from a secret: it is masked in the logs. Only takes effect if egress-pro == "true"'
+    required: false
+    default: ""
+  openvidu-pro-license-api:
+    description: 'Licensing API egress-pro checks the license against (e.g. https://accounts.openvidu.io/dev/ for a development license). Only takes effect if egress-pro == "true". If empty, the production licensing API'
+    required: false
+    default: ""
   tags-openvidu-local-deployment:
     description: "JSON object with tags for overwriting values in the docker-compose.yaml services of the openvidu-local-deployment (https://github.com/OpenVidu/openvidu-local-deployment/blob/main/pro/docker-compose.yaml).\nExample: {\"caddy-proxy\": \"main\", \"redis\": \"7.4.2-alpine\", \"minio\": \"2025.2.7-debian-12-r0\", \"mongo\": \"8.0.4\", \"dashboard\": \"main\", \"ingress\": \"main\", \"egress\": \"v1.9.0\", \"default-app\": \"main-demo\", \"openvidu-v2compatibility\": \"main\", \"operator\": \"main\"}"
     required: false
@@ -118,6 +130,27 @@ runs:
         ./configure_lan_private_ip_linux.sh
         popd
 
+    # egress-pro reads OPENVIDU_PRO_LICENSE and OPENVIDU_PRO_LICENSE_API before its config file.
+    # The values go to the .env file Docker Compose interpolates, never into the logs.
+    - name: Configure egress-pro
+      shell: bash
+      working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
+      if: ${{ inputs.openvidu-edition == 'pro' && inputs.egress-pro == 'true' }}
+      env:
+        LICENSE: ${{ inputs.openvidu-pro-license }}
+        LICENSE_API: ${{ inputs.openvidu-pro-license-api }}
+      run: |
+        if [ -z "$LICENSE" ]; then
+          echo "::error::egress-pro needs input openvidu-pro-license: it exits at startup without a license"
+          exit 1
+        fi
+        echo "::add-mask::$LICENSE"
+        current_image=$(yq e '.services.egress.image' docker-compose.yaml)
+        yq e -i ".services.egress.image = \"docker.io/openvidu/egress-pro:${current_image##*:}\"" docker-compose.yaml
+        yq e -i '.services.egress.environment += ["OPENVIDU_PRO_LICENSE=${OPENVIDU_PRO_LICENSE}", "OPENVIDU_PRO_LICENSE_API=${OPENVIDU_PRO_LICENSE_API:-}"]' docker-compose.yaml
+        printf '\nOPENVIDU_PRO_LICENSE=%s\nOPENVIDU_PRO_LICENSE_API=%s\n' "$LICENSE" "$LICENSE_API" >> .env
+        echo "Egress image: $(yq e '.services.egress.image' docker-compose.yaml)"
+
     - name: Configure OpenVidu Local Deployment
       shell: bash
       working-directory: ./openvidu-local-deployment/${{ inputs.openvidu-edition }}
@@ -154,6 +187,13 @@ runs:
           docker ps -aqf "name=$CONTAINER_NAME_PART"
         }
 
+        # A license failure makes egress-pro exit and restart, and the ready check never ends
+        dump_diagnostics() {
+          docker compose ps -a || true
+          echo "--- last lines of the egress container log:"
+          docker logs --tail 50 egress 2>&1 || true
+        }
+
         echo "Waiting for container '$CONTAINER_NAME_PART' to be created..."
         while true; do
           CONTAINER_ID=$(get_container_id)
@@ -165,6 +205,7 @@ runs:
           CURRENT_TIME=$(date +%s)
           if (( CURRENT_TIME - START_TIME >= TIMEOUT )); then
             echo "Timeout: Container did not appear within $TIMEOUT seconds."
+            dump_diagnostics
             exit 1
           fi
         done
@@ -179,6 +220,7 @@ runs:
               exit 0
             else
               echo "Container exited with non-zero exit code: $EXIT_CODE"
+              dump_diagnostics
               exit 1
             fi
           fi
@@ -186,6 +228,7 @@ runs:
           CURRENT_TIME=$(date +%s)
           if (( CURRENT_TIME - START_TIME >= TIMEOUT )); then
             echo "Timeout: Container did not exit within $TIMEOUT seconds."
+            dump_diagnostics
             exit 1
           fi
         done
