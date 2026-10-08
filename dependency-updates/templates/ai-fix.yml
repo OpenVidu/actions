@@ -25,7 +25,7 @@ jobs:
       (github.event.workflow_run.conclusion == 'failure' &&
        github.event.workflow_run.event == 'pull_request' &&
        startsWith(github.event.workflow_run.head_branch, 'renovate/'))
-    uses: OpenVidu/actions/.github/workflows/renovate-ai-fix.yml@v1
+    uses: OpenVidu/actions/.github/workflows/renovate-ai-fix.yml@41526ed83a611649aa1cddc11cd58ec1e88c859e # v1.0.23
     with:
       max-attempts: 2
     secrets: inherit
