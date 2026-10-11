@@ -88,7 +88,9 @@ runs:
 
         for pattern in "${TEMP_PATTERNS[@]}"; do
           echo "Removing /tmp/$pattern files..."
-          find /tmp -name "$pattern" -type f -o -type d 2>/dev/null | xargs rm -rf 2>/dev/null || echo "No $pattern files found or permission denied"
+          # -mindepth 1 and the grouped -type keep /tmp itself out of the deletion
+          find /tmp -mindepth 1 -name "$pattern" \( -type f -o -type d \) -prune -exec rm -rf {} + 2>/dev/null \
+            || echo "No $pattern files found or permission denied"
         done
 
     - name: Cleanup build directories
