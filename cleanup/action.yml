@@ -93,21 +93,15 @@ runs:
             || echo "No $pattern files found or permission denied"
         done
 
-    - name: Cleanup build directories
+    - name: Cleanup workspace
       continue-on-error: true
       shell: bash
       run: |
-        echo "Cleaning build directories..."
-        # Safe cleanup of common build directories
-        find . -type d -name "node_modules" -exec rm -rf {} \; 2>/dev/null || echo "Failed to clean some node_modules dirs"
-        find . -type d -name "dist" -exec rm -rf {} \; 2>/dev/null || echo "Failed to clean some dist dirs"
-        find . -type d -name ".cache" -exec rm -rf {} \; 2>/dev/null || echo "Failed to clean some cache dirs"
-        find . -type d -name ".angular" -exec rm -rf {} \; 2>/dev/null || echo "Failed to clean some angular dirs"
-
-        # Clean specific directories with sudo if necessary but safely
-        if [ -d "openvidu-local-deployment" ]; then
-          sudo rm -rf openvidu-local-deployment 2>/dev/null || rm -rf openvidu-local-deployment 2>/dev/null || echo "Warning: Failed to remove openvidu-local-deployment"
-        fi
+        echo "Emptying the workspace $GITHUB_WORKSPACE..."
+        # Files created by containers can belong to root, hence the sudo fallback
+        find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null \
+          || sudo find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null \
+          || echo "Failed to empty the workspace"
 
     - name: Free disk space
       continue-on-error: true
