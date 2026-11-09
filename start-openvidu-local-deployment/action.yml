@@ -70,8 +70,22 @@ runs:
     - name: Install required packages
       shell: bash
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential jq
+        # Wait up to 15 min for apt locks held by other processes (unattended-upgrades on a fresh runner) instead of failing
+        apt_get() {
+          local log="$RUNNER_TEMP/apt-get.log" deadline=$((SECONDS + 900))
+          while true; do
+            if sudo apt-get -o DPkg::Lock::Timeout=$((deadline - SECONDS)) "$@" 2>&1 | tee "$log"; then
+              return 0
+            fi
+            if ! grep -q "Could not get lock" "$log" || (( SECONDS + 10 >= deadline )); then
+              return 1
+            fi
+            echo "An apt lock is held by another process: retrying 'apt-get $*' in 10 s"
+            sleep 10
+          done
+        }
+        apt_get update
+        apt_get install -y build-essential jq
         sudo wget https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
 
     - name: Setup mediasoup-worker
