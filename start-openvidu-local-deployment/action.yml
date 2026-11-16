@@ -86,7 +86,7 @@ runs:
         }
         apt_get update
         apt_get install -y build-essential jq
-        sudo wget https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
+        sudo wget https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_$(dpkg --print-architecture) -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
 
     - name: Setup mediasoup-worker
       if: ${{ inputs.openvidu-edition == 'pro' && inputs.rtc-engine == 'mediasoup' && inputs.mediasoup-worker-bin == '' }}
